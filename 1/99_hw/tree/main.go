@@ -27,11 +27,10 @@ func dirTree(writer io.Writer, path string, isPrintFiles bool) error {
 	FilePrefix := ""
 	DirPrefix := ""
 
-	dir, err := processDirectory(path, isPrintFiles, FilePrefix, DirPrefix)
+	_, err := processDirectory(path, isPrintFiles, FilePrefix, DirPrefix)
 	if err != nil {
 		return err
 	}
-	fmt.Println("dir", dir)
 	src := strings.NewReader("xui pizda ebana")
 	if _, err := io.Copy(writer, src); err != nil {
 		return err
@@ -58,7 +57,13 @@ func processDirectory(RouterPath string, isPrintFiles bool, FilePrefix string, D
 				fmt.Println(DirPrefix + "├───" + val.Name())
 			}
 
-			dir, err := processDirectory(pathLib.Join(RouterPath, val.Name()), isPrintFiles, FilePrefix, DirPrefix+"\t")
+			postFix := ""
+			if i == len(dirs)-1 {
+				postFix = ""
+			} else {
+				postFix = "|"
+			}
+			dir, err := processDirectory(pathLib.Join(RouterPath, val.Name()), isPrintFiles, FilePrefix, DirPrefix+postFix+"\t")
 			if err != nil {
 				return Directory{}, nil
 			}
