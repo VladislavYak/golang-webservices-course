@@ -1,14 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	pathLib "path"
 	"strconv"
-	"strings"
 )
-
-var res string
 
 func main() {
 	// v := "xuipuzda"
@@ -25,7 +23,6 @@ func main() {
 	path := os.Args[1]
 	printFiles := len(os.Args) == 3 && os.Args[2] == "-f"
 	err := dirTree(out, path, printFiles)
-
 	if err != nil {
 		panic(err.Error())
 	}
@@ -34,18 +31,18 @@ func main() {
 func dirTree(writer io.Writer, path string, isPrintFiles bool) error {
 	DirPrefix := ""
 
-	_, err := processDirectory(path, isPrintFiles, DirPrefix)
+	_, err := processDirectory(path, isPrintFiles, DirPrefix, writer)
 	if err != nil {
 		return err
 	}
-	src := strings.NewReader(res)
-	if _, err := io.Copy(writer, src); err != nil {
-		return err
-	}
+	// src := strings.NewReader("xui pizda ebana")
+	// if _, err := io.Copy(writer, src); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
-func processDirectory(RouterPath string, isPrintFiles bool, DirPrefix string) (Directory, error) {
+func processDirectory(RouterPath string, isPrintFiles bool, DirPrefix string, out io.Writer) (Directory, error) {
 	// log.Println("PROCESSING FOLLOWING PATH:", RouterPath)
 	dirs, err := os.ReadDir(RouterPath)
 	var new_dirs []os.DirEntry
@@ -68,9 +65,9 @@ func processDirectory(RouterPath string, isPrintFiles bool, DirPrefix string) (D
 		if val.IsDir() {
 
 			if i == len(dirs)-1 {
-				res += DirPrefix + "└───" + val.Name() + "\n"
+				fmt.Fprintln(out, DirPrefix+"└───"+val.Name())
 			} else {
-				res += DirPrefix + "├───" + val.Name() + "\n"
+				fmt.Fprintln(out, DirPrefix+"├───"+val.Name())
 			}
 
 			postFix := ""
@@ -79,7 +76,7 @@ func processDirectory(RouterPath string, isPrintFiles bool, DirPrefix string) (D
 			} else {
 				postFix = "│"
 			}
-			dir, err := processDirectory(pathLib.Join(RouterPath, val.Name()), isPrintFiles, DirPrefix+postFix+"\t")
+			dir, err := processDirectory(pathLib.Join(RouterPath, val.Name()), isPrintFiles, DirPrefix+postFix+"\t", out)
 			if err != nil {
 				return Directory{}, nil
 			}
@@ -92,9 +89,9 @@ func processDirectory(RouterPath string, isPrintFiles bool, DirPrefix string) (D
 			}
 
 			if i == len(dirs)-1 {
-				res += DirPrefix + "└───" + filename + "\n"
+				fmt.Fprintln(out, DirPrefix+"└───"+filename)
 			} else {
-				res += DirPrefix + "├───" + filename + "\n"
+				fmt.Fprintln(out, DirPrefix+"├───"+filename)
 			}
 			d.files = append(d.files, filename)
 		}
