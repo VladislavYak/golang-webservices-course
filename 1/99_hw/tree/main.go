@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"io"
-	"log"
 	"os"
 	pathLib "path"
+	"strings"
 )
 
 func main() {
@@ -23,54 +24,53 @@ func main() {
 }
 
 func dirTree(writer io.Writer, path string, isPrintFiles bool) error {
-	dirs, err := os.ReadDir(path)
+	FilePrefix := ""
+	DirPrefix := ""
 
+	dir, err := processDirectory(path, isPrintFiles, FilePrefix, DirPrefix)
 	if err != nil {
 		return err
 	}
-	// processDirectory(path)
-
-	baseDir := Directory{}
-	baseDir.name = pathLib.Dir(path)
-	for _, val := range dirs {
-		if val.IsDir() {
-			dir, err := processDirectory(pathLib.Join(path, val.Name()), isPrintFiles)
-			if err != nil {
-				panic("panic")
-			}
-			baseDir.dirs = append(baseDir.dirs, dir)
-		} else if isPrintFiles {
-			baseDir.files = append(baseDir.files, val.Name())
-		}
+	fmt.Println("dir", dir)
+	src := strings.NewReader("xui pizda ebana")
+	if _, err := io.Copy(writer, src); err != nil {
+		return err
 	}
-
-	log.Printf("baseDir: %+v\n", baseDir)
-
-	// src := strings.NewReader(path)w
-	// if _, err := io.Copy(writer, src); err != nil {
-	// 	return err
-	// }
 	return nil
 }
 
-func processDirectory(RouterPath string, isPrintFiles bool) (Directory, error) {
-	log.Println("PROCESSING FOLLOWING PATH:", RouterPath)
+func processDirectory(RouterPath string, isPrintFiles bool, FilePrefix string, DirPrefix string) (Directory, error) {
+	// log.Println("PROCESSING FOLLOWING PATH:", RouterPath)
 	dirs, err := os.ReadDir(RouterPath)
-	log.Println("FOUNEDED FILES&FOLDERS:", dirs)
+	// log.Println("FOUNEDED FILES&FOLDERS:", dirs)
 
 	if err != nil {
 		return Directory{}, err
 	}
 
-	d := Directory{}
-	d.name = pathLib.Base(RouterPath)
-	for _, val := range dirs {
+	d := Directory{name: pathLib.Base(RouterPath)}
+	for i, val := range dirs {
 		if val.IsDir() {
-			log.Println("---")
-			dir, _ := processDirectory(pathLib.Join(RouterPath, val.Name()), isPrintFiles)
 
+			if i == len(dirs)-1 {
+				fmt.Println(DirPrefix + "└───" + val.Name())
+			} else {
+				fmt.Println(DirPrefix + "├───" + val.Name())
+			}
+
+			dir, err := processDirectory(pathLib.Join(RouterPath, val.Name()), isPrintFiles, FilePrefix, DirPrefix+"\t")
+			if err != nil {
+				return Directory{}, nil
+			}
 			d.dirs = append(d.dirs, dir)
+
 		} else if isPrintFiles {
+
+			if i == len(dirs)-1 {
+				fmt.Println(DirPrefix + "└───" + val.Name())
+			} else {
+				fmt.Println(DirPrefix + "├───" + val.Name())
+			}
 			d.files = append(d.files, val.Name())
 		}
 	}
