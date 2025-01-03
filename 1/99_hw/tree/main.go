@@ -34,12 +34,12 @@ func dirTree(writer io.Writer, path string, isPrintFiles bool) error {
 	baseDir.name = pathLib.Dir(path)
 	for _, val := range dirs {
 		if val.IsDir() {
-			dir, err := processDirectory(pathLib.Join(path, val.Name()))
+			dir, err := processDirectory(pathLib.Join(path, val.Name()), isPrintFiles)
 			if err != nil {
 				panic("panic")
 			}
 			baseDir.dirs = append(baseDir.dirs, dir)
-		} else {
+		} else if isPrintFiles {
 			baseDir.files = append(baseDir.files, val.Name())
 		}
 	}
@@ -53,7 +53,7 @@ func dirTree(writer io.Writer, path string, isPrintFiles bool) error {
 	return nil
 }
 
-func processDirectory(RouterPath string) (Directory, error) {
+func processDirectory(RouterPath string, isPrintFiles bool) (Directory, error) {
 	log.Println("PROCESSING FOLLOWING PATH:", RouterPath)
 	dirs, err := os.ReadDir(RouterPath)
 	log.Println("FOUNEDED FILES&FOLDERS:", dirs)
@@ -66,12 +66,11 @@ func processDirectory(RouterPath string) (Directory, error) {
 	d.name = pathLib.Base(RouterPath)
 	for _, val := range dirs {
 		if val.IsDir() {
-			d.dirs = append(d.dirs, Directory{name: val.Name()})
 			log.Println("---")
-			dir, _ := processDirectory(pathLib.Join(RouterPath, val.Name()))
+			dir, _ := processDirectory(pathLib.Join(RouterPath, val.Name()), isPrintFiles)
 
 			d.dirs = append(d.dirs, dir)
-		} else {
+		} else if isPrintFiles {
 			d.files = append(d.files, val.Name())
 		}
 	}
