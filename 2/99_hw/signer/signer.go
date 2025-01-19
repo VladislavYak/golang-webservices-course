@@ -5,11 +5,16 @@ import (
 	"strings"
 )
 
-// i guess all the functions expected to have chans as input in order to increase performance
+// in, out chan interface{} - this shoud be the input
+// dunno what is the output
+// job() used as datatype cast at tests
 func SingleHash(data string) string {
 	return DataSignerCrc32(data) + "~" + DataSignerCrc32(DataSignerMd5(data))
 }
 
+// in, out chan interface{} - this shoud be the input
+// dunno what is the output
+// job() used as datatype cast at tests
 func MultiHash(data string) string {
 	values := []int{0, 1, 2, 3, 4, 5}
 	res := ""
