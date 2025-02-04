@@ -24,6 +24,7 @@ func MultiHash(data string) string {
 	return res
 }
 
+// it gets arbitrary number of values as input and should process them concurrently
 func CombineResults(data string) string {
 	// probably this func should take several values as input
 	sh := SingleHash(data)
