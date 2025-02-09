@@ -35,12 +35,12 @@ func main() {
 				out <- val
 			}
 		}),
-		// job(func(in, out chan interface{}) {
-		// 	for val := range in {
-		// 		fmt.Println("quadratic", val, val.(int)*val.(int))
-		// 		out <- val.(int) * val.(int)
-		// 	}
-		// }),
+		job(func(in, out chan interface{}) {
+			for val := range in {
+				fmt.Println("quadratic", val, val.(int)*val.(int))
+				out <- val.(int) * val.(int)
+			}
+		}),
 	}
 
 	ExecutePipeline(jobs...)

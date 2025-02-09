@@ -37,33 +37,9 @@ func CombineResults(data string) string {
 
 }
 
-// jobs := []job{
-// 	job(func(in, out chan interface{}) {
-// 		// out <- 1
-// 		out <- 2
-// 		out <- 3
-
-// 		close(out)
-// 	}),
-// 	job(func(in, out chan interface{}) {
-// 		for val := range in {
-// 			fmt.Println("val", val)
-
-// 			out <- val
-// 		}
-// 	}),
-// 	// job(func(in, out chan interface{}) {
-// 	// 	for val := range in {
-// 	// 		fmt.Println("quadratic", val, val.(int)*val.(int))
-// 	// 		out <- val.(int) * val.(int)
-// 	// 	}
-// 	// }),
-// }
-
 func ExecutePipeline(jobs ...job) {
 
 	in := make(chan interface{})
-
 	for _, j := range jobs {
 		in = executor(j, in)
 
