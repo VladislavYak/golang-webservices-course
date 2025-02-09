@@ -63,24 +63,15 @@ func CombineResults(data string) string {
 func ExecutePipeline(jobs ...job) {
 
 	in := make(chan interface{})
-	// out := make(chan interface{})
 
-	j0 := jobs[0]
-	j1 := jobs[1]
+	for _, j := range jobs {
+		in = executor(j, in)
 
-	o0 := executor(j0, in)
-	o1 := executor(j1, o0)
-
-	for v := range o1 {
-		fmt.Println("v", v)
 	}
 
-	// for _, j := range jobs {
-	// 	out := executor(j, in)
-
-	// 	in = out
-
-	// }
+	for v := range in {
+		fmt.Println("v", v)
+	}
 
 }
 
