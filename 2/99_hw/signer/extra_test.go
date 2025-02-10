@@ -45,6 +45,9 @@ func TestByIlia(t *testing.T) {
 
 	ExecutePipeline(freeFlowJobs...)
 
+	// yakovlev: if i add this condition - test passes. So the goal is to make ExecutePipline be waitable
+	// time.Sleep(time.Millisecond * 250)
+
 	end := time.Since(start)
 
 	expectedTime := time.Millisecond * 350
