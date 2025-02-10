@@ -26,7 +26,6 @@ func main() {
 			out <- 2
 			out <- 3
 
-			close(out)
 		}),
 		job(func(in, out chan interface{}) {
 			for val := range in {
@@ -38,7 +37,7 @@ func main() {
 		job(func(in, out chan interface{}) {
 			for val := range in {
 				fmt.Println("quadratic", val, val.(int)*val.(int))
-				out <- val.(int) * val.(int)
+				// out <- val.(int) * val.(int)
 			}
 		}),
 	}
