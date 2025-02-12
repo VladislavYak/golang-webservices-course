@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -20,46 +21,33 @@ import (
 
 // test execute pipeline
 func main() {
+
+	var recieved uint32
 	jobs := []job{
 		job(func(in, out chan interface{}) {
-			out <- 1
-			out <- 2
-			out <- 3
-
+			out <- uint32(1)
+			out <- uint32(3)
+			out <- uint32(4)
 		}),
 		job(func(in, out chan interface{}) {
 			for val := range in {
-				fmt.Println("val", val)
-
-				out <- val
+				out <- val.(uint32) * 3
+				time.Sleep(time.Millisecond * 100)
 			}
 		}),
 		job(func(in, out chan interface{}) {
 			for val := range in {
-				fmt.Println("quadratic", val, val.(int)*val.(int))
-				// out <- val.(int) * val.(int)
+				fmt.Println("collected", val)
+				atomic.AddUint32(&recieved, val.(uint32))
+
+				fmt.Println("IN GOROUTINE recieved BECOME", recieved)
 			}
 		}),
 	}
 
 	ExecutePipeline(jobs...)
 
+	fmt.Println("result recieved", recieved)
+
 	time.Sleep(time.Second * 5)
 }
-
-// func gen(out chan int, values ...int) {
-// 	defer close(out)
-// 	for _, v := range values {
-// 		out <- v
-// 	}
-// }
-
-// func main() {
-// 	out := make(chan int)
-// 	go gen(out, 1, 2, 3, 4)
-
-// 	for v := range out {
-// 		fmt.Println("v", v)
-// 	}
-// 	time.Sleep(time.Second * 5)
-// }
