@@ -58,7 +58,7 @@ func ExecutePipeline(jobs ...job) {
 			j(in, out)
 			close(out)
 		}(j, in, out)
-		in, out = out, in
+		in = out
 
 	}
 
