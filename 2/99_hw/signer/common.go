@@ -42,6 +42,9 @@ var OverheatUnlock = func() {
 	}
 }
 
+// выполнять один за раз
+// функция которая вызывает эту функцию, но контролирует, что запущена только одна?
+// что-то типа ratelimiter
 var DataSignerMd5 = func(data string) string {
 	OverheatLock()
 	defer OverheatUnlock()
@@ -51,6 +54,8 @@ var DataSignerMd5 = func(data string) string {
 	return dataHash
 }
 
+// выполнять как можно параллельно
+// функция, которая максимально параллелит выполнение данной функции
 var DataSignerCrc32 = func(data string) string {
 	data += DataSignerSalt
 	crcH := crc32.ChecksumIEEE([]byte(data))
