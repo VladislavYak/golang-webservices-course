@@ -1,39 +1,61 @@
 package main
 
 import (
-	"fmt"
 	"time"
 )
 
 func main() {
-	// inputData := []int{0, 1, 1, 2, 3, 5, 8}
 	inputData := []int{0, 1, 1, 2}
+	in := make(chan interface{})
 
-	hashSignJobs := []job{
-		job(func(in, out chan interface{}) {
-			for _, fibNum := range inputData {
-				out <- fibNum
-			}
-		}),
-		job(SingleHash),
-		// job(MultiHash),
-		// job(CombineResults),
-		job(func(in, out chan interface{}) {
-			for val := range in {
-				fmt.Println("val", val)
-			}
-		}),
-	}
+	go func(out chan interface{}) {
 
-	start := time.Now()
+		for _, val := range inputData {
+			out <- val
+		}
+		close(out)
 
-	ExecutePipeline(hashSignJobs...)
+	}(in)
 
-	end := time.Since(start)
-	fmt.Println("end", end)
+	shOut := make(chan interface{})
+	go SingleHash(in, shOut)
 
-	time.Sleep(time.Second * 10)
+	// for val := range shOut {
+	// 	fmt.Println("val", val)
+	// }
+
+	time.Sleep(time.Second * 5)
+
 }
+
+// inputData := []int{0, 1, 1, 2, 3, 5, 8}
+// inputData := []int{0, 1, 1, 2}
+
+// 	hashSignJobs := []job{
+// 		job(func(in, out chan interface{}) {
+// 			for _, fibNum := range inputData {
+// 				out <- fibNum
+// 			}
+// 		}),
+// 		job(SingleHash),
+// 		// job(MultiHash),
+// 		// job(CombineResults),
+// 		job(func(in, out chan interface{}) {
+// 			for val := range in {
+// 				fmt.Println("val", val)
+// 			}
+// 		}),
+// 	}
+
+// 	start := time.Now()
+
+// 	ExecutePipeline(hashSignJobs...)
+
+// 	end := time.Since(start)
+// 	fmt.Println("end", end)
+
+// 	time.Sleep(time.Second * 10)
+// }
 
 // func ParallelWorker(in, out chan interface{}, baseFunc func(data string) string) {
 
