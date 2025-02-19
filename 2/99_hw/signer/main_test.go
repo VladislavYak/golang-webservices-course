@@ -166,3 +166,6 @@ func TestSigner(t *testing.T) {
 	}
 
 }
+
+// yakovlev: add test, crc32 can run in parallel
+// yakovlev: add test, md5 can run only one on a time
