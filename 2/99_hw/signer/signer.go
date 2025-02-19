@@ -94,10 +94,18 @@ func SingleHash(in, out chan interface{}) {
 		// fmt.Println("READ val | md5OutCh", v1)
 		// fmt.Println("READ val | crc32OutCh", v2)
 
-		// fmt.Println("V1 & V2 & res: ", v1, v2, res)
+		fmt.Println("V1 & V2 & res: ", v1, v2, res)
 
 		fmt.Println("RESULT", res.(string)+"~"+v2.(string))
 		// оно перепуталось
+		// должно быть
+		// 0 SingleHash result 4108050209~502633748
+		// 2212294583~709660146
+
+		// RESULT 709660146~2212294583
+		// res val crc32Wrapper2 502633748 cfcd208495d565ef66e7dff9f98764da
+		// V1 & V2 & res:  cfcd208495d565ef66e7dff9f98764da 4108050209 502633748
+		// RESULT 502633748~4108050209
 	}
 
 	// for val := range crc32OutCh {
