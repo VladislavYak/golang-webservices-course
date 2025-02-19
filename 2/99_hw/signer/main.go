@@ -24,7 +24,7 @@ func main() {
 	// 	fmt.Println("val", val)
 	// }
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 10)
 
 }
 
