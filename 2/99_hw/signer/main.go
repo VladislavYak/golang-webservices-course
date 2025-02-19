@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	inputData := []int{0, 1, 1, 2}
+	inputData := []int{0, 1}
 	in := make(chan interface{})
 
 	go func(out chan interface{}) {

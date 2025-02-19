@@ -84,12 +84,20 @@ func SingleHash(in, out chan interface{}) {
 
 	for {
 		v1 := <-md5OutCh
+
+		out := make(chan interface{})
+		go crc32Wrapper2(v1, out)
+		res := <-out
+
 		v2 := <-crc32OutCh
 
-		fmt.Println("READ val | md5OutCh", v1)
-		fmt.Println("READ val | crc32OutCh", v2)
+		// fmt.Println("READ val | md5OutCh", v1)
+		// fmt.Println("READ val | crc32OutCh", v2)
 
-		fmt.Println("V1 & V2: ", v1, v2)
+		// fmt.Println("V1 & V2 & res: ", v1, v2, res)
+
+		fmt.Println("RESULT", res.(string)+"~"+v2.(string))
+		// оно перепуталось
 	}
 
 	// for val := range crc32OutCh {
@@ -147,12 +155,21 @@ func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{},
 }
 
 func crc32Wrapper2(val interface{}, out chan interface{}) {
-	tmp := val.(int)
-	val2 := strconv.Itoa(int(tmp))
-
-	res := DataSignerCrc32(val2)
-	fmt.Println("res val crc32Wrapper2", res, val)
-	out <- res
+	switch val.(type) {
+	case int:
+		tmp := val.(int)
+		val2 := strconv.Itoa(int(tmp))
+		res := DataSignerCrc32(val2)
+		fmt.Println("res val crc32Wrapper2", res, val)
+		out <- res
+	case string:
+		tmp := val.(string)
+		res := DataSignerCrc32(tmp)
+		fmt.Println("res val crc32Wrapper2", res, val)
+		out <- res
+	default:
+		fmt.Println("val is of unknown type")
+	}
 }
 
 // in, out chan interface{} - this shoud be the input
