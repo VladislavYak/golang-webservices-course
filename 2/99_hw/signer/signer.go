@@ -67,18 +67,29 @@ func SingleHash(in, out chan interface{}) {
 		// }(val, out)
 		go md5Wrapper(val, quotaCh, md5OutCh)
 		go crc32Wrapper2(val, crc32OutCh)
+
 		// go md5Wrapper(val)
 		// close(out)
 		// go md5Wrapper(val, quotaCh, md5OutCh)
 
 	}
 
-	for val := range md5OutCh {
-		fmt.Println("val md5OutCh", val)
-	}
+	// for val := range md5OutCh {
+	// 	fmt.Println("READ val | md5OutCh", val)
+	// }
 
-	for val := range crc32OutCh {
-		fmt.Println("val crc32OutCh", val)
+	// for val := range crc32OutCh {
+	// 	fmt.Println("READ val | crc32OutCh", val)
+	// }
+
+	for {
+		v1 := <-md5OutCh
+		v2 := <-crc32OutCh
+
+		fmt.Println("READ val | md5OutCh", v1)
+		fmt.Println("READ val | crc32OutCh", v2)
+
+		fmt.Println("V1 & V2: ", v1, v2)
 	}
 
 	// for val := range crc32OutCh {
