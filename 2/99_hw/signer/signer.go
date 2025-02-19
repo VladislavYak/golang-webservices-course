@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"strconv"
 	"sync"
 )
 
@@ -13,6 +15,40 @@ import (
 //	}
 func SingleHash(in, out chan interface{}) {
 
+	// parallel computations
+	// for val := range in {
+	// 	go func(val interface{}, out chan interface{}) {
+	// 		// defer close(out)
+
+	// 		tmp := val.(int)
+	// 		val2 := strconv.Itoa(int(tmp))
+
+	// 		res := DataSignerCrc32(val2)
+
+	// 		fmt.Println("res for val", res, val)
+	// 		out <- res
+
+	// 	}(val, out)
+	// }
+
+	// sequential execution
+	quotaCh := make(chan struct{}, 1)
+	go func() {
+		quotaCh <- struct{}{}
+
+		for val := range in {
+			tmp := val.(int)
+			val2 := strconv.Itoa(int(tmp))
+
+			res := DataSignerMd5(val2)
+
+			fmt.Println("res for val", res, val)
+
+			out <- res
+		}
+
+		<-quotaCh
+	}()
 }
 
 // in, out chan interface{} - this shoud be the input
@@ -56,7 +92,7 @@ func ExecutePipeline(jobs ...job) {
 		go func(j job, in, out chan interface{}) {
 			defer wg.Done()
 			j(in, out)
-			close(out)
+			// close(out)
 		}(j, in, out)
 		in = out
 

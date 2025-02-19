@@ -2,51 +2,59 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 )
 
 func main() {
-	in := make(chan interface{})
-	out := make(chan interface{})
+	// inputData := []int{0, 1, 1, 2, 3, 5, 8}
+	inputData := []int{0, 1, 1, 2}
 
-	go func(out chan interface{}) {
-		defer close(out)
-		out <- uint32(5)
-		out <- uint32(1)
-		time.Sleep(time.Second * 3)
-		out <- uint32(7)
+	hashSignJobs := []job{
+		job(func(in, out chan interface{}) {
+			for _, fibNum := range inputData {
+				out <- fibNum
+			}
+		}),
+		job(SingleHash),
+		// job(MultiHash),
+		// job(CombineResults),
+		job(func(in, out chan interface{}) {
+			for val := range in {
+				fmt.Println("val", val)
+			}
+		}),
+	}
 
-	}(out)
+	start := time.Now()
 
-	in = out
+	ExecutePipeline(hashSignJobs...)
 
-	out2 := make(chan interface{})
-	ParallelWorker(in, out2, DataSignerCrc32)
+	end := time.Since(start)
+	fmt.Println("end", end)
 
 	time.Sleep(time.Second * 10)
 }
 
-func ParallelWorker(in, out chan interface{}, baseFunc func(data string) string) {
+// func ParallelWorker(in, out chan interface{}, baseFunc func(data string) string) {
 
-	for val := range in {
-		go func(val interface{}, out chan interface{}) {
-			defer close(out)
-			fmt.Println("val", val)
+// 	for val := range in {
+// 		go func(val interface{}, out chan interface{}) {
+// 			defer close(out)
+// 			fmt.Println("val", val)
 
-			tmp := val.(uint32)
-			val2 := strconv.Itoa(int(tmp))
+// 			tmp := val.(uint32)
+// 			val2 := strconv.Itoa(int(tmp))
 
-			res := baseFunc(val2)
+// 			res := baseFunc(val2)
 
-			fmt.Println("res for val", res, val)
-			out <- res
+// 			fmt.Println("res for val", res, val)
+// 			out <- res
 
-		}(val, out)
-	}
-}
+// 		}(val, out)
+// 	}
+// }
 
 // OneInATimeWorker executes baseFunc sequentially
-func OneInATimeWorker(in, out chan interface{}, baseFunc func(data string) string) {
-	//
-}
+// func OneInATimeWorker(in, out chan interface{}, baseFunc func(data string) string) {
+// 	//
+// }
