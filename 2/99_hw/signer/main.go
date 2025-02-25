@@ -4,6 +4,9 @@ import (
 	"time"
 )
 
+// correct results
+// 0 : 4108050209~502633748
+// 1 : 2212294583~709660146
 func main() {
 	inputData := []int{0, 1}
 	in := make(chan interface{})

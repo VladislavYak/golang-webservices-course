@@ -13,83 +13,35 @@ import (
 //	func SingleHash(data string) string {
 //		return DataSignerCrc32(data) + "~" + DataSignerCrc32(DataSignerMd5(data))
 //	}
+
+// 4108050209~502633748
+// 2212294583~709660146
 func SingleHash(in, out chan interface{}) {
-	// ебануть разные каналы для парралельно и последовательной обработки?
-	// создать канал в который должна записать последовательная который после будет читать паралельной обработкой?
-
-	// parallel computations
-	// for val := range in {
-	// 	go func(val interface{}, out chan interface{}) {
-	// 		// defer close(out)
-
-	// 		tmp := val.(int)
-	// 		val2 := strconv.Itoa(int(tmp))
-
-	// 		res := DataSignerCrc32(val2)
-
-	// 		fmt.Println("res for val", res, val)
-	// 		out <- res
-
-	// 	}(val, out)
-	// }
-
-	// sequential execution
-	// quotaCh := make(chan struct{}, 1)
-	// go func() {
-	// 	quotaCh <- struct{}{}
-
-	// 	for val := range in {
-	// 		tmp := val.(int)
-	// 		val2 := strconv.Itoa(int(tmp))
-
-	// 		res := DataSignerMd5(val2)
-
-	// 		fmt.Println("res for val", res, val)
-
-	// 		out <- res
-	// 	}
-
-	// 	<-quotaCh
-	// }()
-
-	// attempt to do several computiations in one place
 	quotaCh := make(chan struct{}, 1)
 	crc32OutCh := make(chan interface{})
 	md5OutCh := make(chan interface{})
+	wg := sync.WaitGroup{}
 	for val := range in {
-		// go func(val interface{}, out chan interface{}) {
-		// 	tmp := val.(int)
-		// 	val2 := strconv.Itoa(int(tmp))
+		wg.Add(1)
+		go md5Wrapper(val, quotaCh, md5OutCh, &wg)
 
-		// 	res := DataSignerCrc32(val2)
-		// 	fmt.Println("res", res)
-
-		// }(val, out)
-		go md5Wrapper(val, quotaCh, md5OutCh)
-		go crc32Wrapper2(val, crc32OutCh)
-
-		// go md5Wrapper(val)
-		// close(out)
-		// go md5Wrapper(val, quotaCh, md5OutCh)
-
+		wg.Add(1)
+		go crc32Wrapper2(val, crc32OutCh, &wg)
 	}
 
-	// for val := range md5OutCh {
-	// 	fmt.Println("READ val | md5OutCh", val)
-	// }
-
-	// for val := range crc32OutCh {
-	// 	fmt.Println("READ val | crc32OutCh", val)
-	// }
-
 	for {
+
 		v1 := <-md5OutCh
-
-		out := make(chan interface{})
-		go crc32Wrapper2(v1, out)
-		res := <-out
-
 		v2 := <-crc32OutCh
+
+		wg.Add(1)
+		go crc32Wrapper2(v1, crc32OutCh, &wg)
+
+		res := <-crc32OutCh
+
+		go func() {
+			wg.Wait()
+		}()
 
 		// fmt.Println("READ val | md5OutCh", v1)
 		// fmt.Println("READ val | crc32OutCh", v2)
@@ -107,47 +59,11 @@ func SingleHash(in, out chan interface{}) {
 		// V1 & V2 & res:  cfcd208495d565ef66e7dff9f98764da 4108050209 502633748
 		// RESULT 502633748~4108050209
 	}
-
-	// for val := range crc32OutCh {
-	// 	fmt.Println("val", val)
-	// }
-
-	// for val := range md5OutCh {
-	// 	fmt.Println("v md5OutCh", val)
-	// }
-
-	// 	for val := range in {
-	// 		md5Out := make(chan string)
-	// 		wg := sync.WaitGroup{}
-	// 		wg.Add(3)
-	// 		// wg.Add(2)
-	// 		// wg.Add(1)
-	// 		go md5Wrapper(val, quotaCh, md5Out, &wg)
-
-	// 		crc32Out := make(chan interface{})
-	// 		go crc32Wrapper(val, crc32Out, &wg)
-
-	// 		tmp := <-md5Out
-	// 		tmp1 := <-crc32Out
-
-	// 		go crc32Wrapper(tmp, crc32Out, &wg)
-
-	// 		tmp2 := <-crc32Out
-
-	// 		wg.Wait()
-	// 		fmt.Println("tmp", tmp)
-	// 		fmt.Println("tmp1", tmp1)
-	// 		fmt.Println("tmp2", tmp2)
-
-	// 	}
 }
 
 // md5 wrapper
-func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{},
-
-// wg *sync.WaitGroup
-) {
-	// defer wg.Done()
+func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	quota <- struct{}{}
 
 	tmp := val.(int)
@@ -162,7 +78,8 @@ func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{},
 	<-quota
 }
 
-func crc32Wrapper2(val interface{}, out chan interface{}) {
+func crc32Wrapper2(val interface{}, out chan interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	switch val.(type) {
 	case int:
 		tmp := val.(int)
