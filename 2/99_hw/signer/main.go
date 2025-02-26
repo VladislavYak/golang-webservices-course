@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -23,9 +24,9 @@ func main() {
 	shOut := make(chan interface{})
 	go SingleHash(in, shOut)
 
-	// for val := range shOut {
-	// 	fmt.Println("val", val)
-	// }
+	for val := range shOut {
+		fmt.Println("val", val)
+	}
 
 	time.Sleep(time.Second * 10)
 

@@ -17,48 +17,43 @@ import (
 // 4108050209~502633748
 // 2212294583~709660146
 func SingleHash(in, out chan interface{}) {
+
 	quotaCh := make(chan struct{}, 1)
-	crc32OutCh := make(chan interface{})
-	md5OutCh := make(chan interface{})
-	wg := sync.WaitGroup{}
+
 	for val := range in {
-		wg.Add(1)
-		go md5Wrapper(val, quotaCh, md5OutCh, &wg)
+		crc32OutCh := make(chan interface{})
+		md5OutCh := make(chan interface{})
+		fmt.Println("VAL", val)
+		go func(val interface{}) {
+			wg := sync.WaitGroup{}
 
-		wg.Add(1)
-		go crc32Wrapper2(val, crc32OutCh, &wg)
-	}
+			wg.Add(3)
+			go crc32Wrapper2(val, crc32OutCh, &wg)
+			go md5Wrapper(val, quotaCh, md5OutCh, &wg)
 
-	for {
+			fromCrc32val := <-crc32OutCh
+			md5outVal := <-md5OutCh
 
-		v1 := <-md5OutCh
-		v2 := <-crc32OutCh
+			// fmt.Println("fromCrc32val, anotherCrc32", fromCrc32val, md5outVal)
 
-		wg.Add(1)
-		go crc32Wrapper2(v1, crc32OutCh, &wg)
+			anotherCrc32 := make(chan interface{})
 
-		res := <-crc32OutCh
+			go crc32Wrapper2(md5outVal, anotherCrc32, &wg)
 
-		go func() {
+			finalCrc32 := <-anotherCrc32
+
+			fmt.Println("fromCrc32val, anotherCrc32, finalCrc32", fromCrc32val, md5outVal, finalCrc32)
 			wg.Wait()
-		}()
 
-		// fmt.Println("READ val | md5OutCh", v1)
-		// fmt.Println("READ val | crc32OutCh", v2)
+		}(val)
+		// crc32Wrapper2(anotherCrc32, anotherCrc32)
 
-		fmt.Println("V1 & V2 & res: ", v1, v2, res)
+		// finalCrc32val := <-anotherCrc32
 
-		fmt.Println("RESULT", res.(string)+"~"+v2.(string))
-		// оно перепуталось
-		// должно быть
-		// 0 SingleHash result 4108050209~502633748
-		// 2212294583~709660146
+		// fmt.Println(finalCrc32val.(string) + "~" + fromCrc32val)
 
-		// RESULT 709660146~2212294583
-		// res val crc32Wrapper2 502633748 cfcd208495d565ef66e7dff9f98764da
-		// V1 & V2 & res:  cfcd208495d565ef66e7dff9f98764da 4108050209 502633748
-		// RESULT 502633748~4108050209
 	}
+
 }
 
 // md5 wrapper
