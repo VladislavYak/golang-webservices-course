@@ -43,6 +43,8 @@ func SingleHash(in, out chan interface{}) {
 			finalCrc32 := <-anotherCrc32
 
 			fmt.Println("fromCrc32val, anotherCrc32, finalCrc32", fromCrc32val, md5outVal, finalCrc32)
+
+			fmt.Println("RESULT", fromCrc32val.(string)+"~"+finalCrc32.(string))
 			wg.Wait()
 
 		}(val)
