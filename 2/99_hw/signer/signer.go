@@ -115,21 +115,22 @@ func MultiHash(in, out chan interface{}) {
 		wg.Add(5)
 
 		hashingOut := make(chan interface{})
+		go func(val interface{}) {
+			for i := 0; i < 5; i++ {
+				go func(i int, val interface{}) {
+					fmt.Println("MULTIHASH VAL", val)
 
-		for i := 0; i < 5; i++ {
-			go func(i int, val interface{}) {
-				fmt.Println("MULTIHASH VAL", val)
+					toF := strconv.Itoa(i) + val.(string)
 
-				toF := strconv.Itoa(i) + val.(string)
+					crc32Wrapper2(toF, hashingOut, &wg)
+				}(i, val)
+			}
 
-				crc32Wrapper2(toF, hashingOut, &wg)
-			}(i, val)
-		}
-
-		for val := range hashingOut {
-			fmt.Println("MultiHash hashingOut val", val)
-		}
-		wg.Wait()
+			for val := range hashingOut {
+				fmt.Println("MultiHash hashingOut val", val)
+			}
+			wg.Wait()
+		}(val)
 
 	}
 
