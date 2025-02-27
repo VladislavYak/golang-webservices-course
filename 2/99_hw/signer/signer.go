@@ -44,7 +44,9 @@ func SingleHash(in, out chan interface{}) {
 
 			fmt.Println("fromCrc32val, anotherCrc32, finalCrc32", fromCrc32val, md5outVal, finalCrc32)
 
-			fmt.Println("RESULT", fromCrc32val.(string)+"~"+finalCrc32.(string))
+			res := fromCrc32val.(string) + "~" + finalCrc32.(string)
+			fmt.Println("RESULT", res)
+			out <- res
 			wg.Wait()
 
 		}(val)
@@ -107,6 +109,29 @@ func crc32Wrapper2(val interface{}, out chan interface{}, wg *sync.WaitGroup) {
 //		return res
 //	}
 func MultiHash(in, out chan interface{}) {
+
+	for val := range in {
+		wg := sync.WaitGroup{}
+		wg.Add(5)
+
+		hashingOut := make(chan interface{})
+
+		for i := 0; i < 5; i++ {
+			go func(i int, val interface{}) {
+				fmt.Println("MULTIHASH VAL", val)
+
+				toF := strconv.Itoa(i) + val.(string)
+
+				crc32Wrapper2(toF, hashingOut, &wg)
+			}(i, val)
+		}
+
+		for val := range hashingOut {
+			fmt.Println("MultiHash hashingOut val", val)
+		}
+		wg.Wait()
+
+	}
 
 }
 
