@@ -137,11 +137,13 @@ func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *syn
 func MultiHash(in, out chan interface{}) {
 
 	for val := range in {
-		wg := sync.WaitGroup{}
-		wg.Add(6)
 
 		hashingOut := make(chan interface{})
+
 		go func(val interface{}) {
+			wg := sync.WaitGroup{}
+			wg.Add(6)
+
 			for i := 0; i < 6; i++ {
 				go func(i int, val interface{}) {
 					fmt.Println("MULTIHASH VAL", val)
@@ -149,19 +151,25 @@ func MultiHash(in, out chan interface{}) {
 					toF := strconv.Itoa(i) + val.(string)
 
 					ctc32WrapperMultiHash(toF, i, hashingOut, &wg)
+
 				}(i, val)
 			}
+
+			go func() {
+				wg.Wait()
+				close(hashingOut)
+			}()
+
 			myArr := []string{}
 			for h_val := range hashingOut {
 				fmt.Println("MultiHash hashingOut h_val, val", h_val, val)
 				myArr = append(myArr, h_val.(string))
-
-				result := FormatMultiHashResult(myArr)
-
-				fmt.Println("multiHash result", result)
 			}
-			wg.Wait()
-			fmt.Println("myArr", myArr)
+
+			result := FormatMultiHashResult(myArr)
+			fmt.Println("multiHash result", result)
+			out <- result
+
 		}(val)
 
 	}
