@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+// func main() {
+// 	res := FormatMultiHashResult([]string{"3_3407918797", "0_2956866606", "4_2730963093", "1_803518384", "2_1425683795"})
+
+// 	fmt.Println("res", res)
+// }
+
 func main() {
 
 	inputData := []int{0, 1}

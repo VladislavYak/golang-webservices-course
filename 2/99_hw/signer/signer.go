@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -96,6 +98,30 @@ func crc32Wrapper2(val interface{}, out chan interface{}, wg *sync.WaitGroup) {
 	}
 }
 
+func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	switch val.(type) {
+	case int:
+		tmp := val.(int)
+		val2 := strconv.Itoa(int(tmp))
+		res := DataSignerCrc32(val2)
+
+		res_2 := strconv.Itoa(i) + "_" + res
+		fmt.Println("res_2 val ctc32WrapperMultiHash", res_2, val)
+		out <- res_2
+	case string:
+		tmp := val.(string)
+		res := DataSignerCrc32(tmp)
+
+		res_2 := strconv.Itoa(i) + "_" + res
+		fmt.Println("res_2 val ctc32WrapperMultiHash", res_2, val)
+		out <- res_2
+	default:
+		fmt.Println("val is of unknown type")
+	}
+}
+
 // in, out chan interface{} - this shoud be the input
 // dunno what is the output
 // job() used as datatype cast at tests
@@ -112,28 +138,49 @@ func MultiHash(in, out chan interface{}) {
 
 	for val := range in {
 		wg := sync.WaitGroup{}
-		wg.Add(5)
+		wg.Add(6)
 
 		hashingOut := make(chan interface{})
 		go func(val interface{}) {
-			for i := 0; i < 5; i++ {
+			for i := 0; i < 6; i++ {
 				go func(i int, val interface{}) {
 					fmt.Println("MULTIHASH VAL", val)
 
 					toF := strconv.Itoa(i) + val.(string)
 
-					crc32Wrapper2(toF, hashingOut, &wg)
+					ctc32WrapperMultiHash(toF, i, hashingOut, &wg)
 				}(i, val)
 			}
+			myArr := []string{}
+			for h_val := range hashingOut {
+				fmt.Println("MultiHash hashingOut h_val, val", h_val, val)
+				myArr = append(myArr, h_val.(string))
 
-			for val := range hashingOut {
-				fmt.Println("MultiHash hashingOut val", val)
+				result := FormatMultiHashResult(myArr)
+
+				fmt.Println("multiHash result", result)
 			}
 			wg.Wait()
+			fmt.Println("myArr", myArr)
 		}(val)
 
 	}
 
+}
+
+func FormatMultiHashResult(arr []string) string {
+	sort.Strings(arr)
+
+	res := ""
+
+	for _, v := range arr {
+		a := strings.SplitAfter(v, "_")
+
+		res += a[len(a)-1]
+
+	}
+
+	return res
 }
 
 // it gets arbitrary number of values as input and should process them concurrently
