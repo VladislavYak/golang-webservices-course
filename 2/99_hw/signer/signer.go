@@ -8,14 +8,6 @@ import (
 	"sync"
 )
 
-// in, out chan interface{} - this shoud be the input
-// dunno what is the output
-// job() used as datatype cast at tests
-//
-//	func SingleHash(data string) string {
-//		return DataSignerCrc32(data) + "~" + DataSignerCrc32(DataSignerMd5(data))
-//	}
-
 // 4108050209~502633748
 // 2212294583~709660146
 func SingleHash(in, out chan interface{}) {
@@ -122,18 +114,6 @@ func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *syn
 	}
 }
 
-// in, out chan interface{} - this shoud be the input
-// dunno what is the output
-// job() used as datatype cast at tests
-//
-//	func MultiHash(data string) string {
-//		values := []int{0, 1, 2, 3, 4, 5}
-//		res := ""
-//		for _, val := range values {
-//			res += DataSignerCrc32(strconv.Itoa(val) + data)
-//		}
-//		return res
-//	}
 func MultiHash(in, out chan interface{}) {
 
 	for val := range in {
