@@ -21,7 +21,7 @@ func main() {
 				out <- fibNum
 			}
 		}),
-		job(SingleHash),
+		// job(SingleHash),
 		job(MultiHash),
 		// job(CombineResults),
 		job(func(in, out chan interface{}) {
@@ -38,5 +38,5 @@ func main() {
 	end := time.Since(start)
 	fmt.Println("end", end)
 
-	time.Sleep(time.Second * 10)
+	// time.Sleep(time.Second * 10)
 }

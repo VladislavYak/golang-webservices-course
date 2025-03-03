@@ -14,10 +14,11 @@ func SingleHash(in, out chan interface{}) {
 
 	quotaCh := make(chan struct{}, 1)
 
+	// closeChWg := sync.WaitGroup{}
+
 	for val := range in {
 		crc32OutCh := make(chan interface{})
 		md5OutCh := make(chan interface{})
-		fmt.Println("VAL", val)
 		go func(val interface{}) {
 			wg := sync.WaitGroup{}
 
@@ -35,8 +36,6 @@ func SingleHash(in, out chan interface{}) {
 			go crc32Wrapper2(md5outVal, anotherCrc32, &wg)
 
 			finalCrc32 := <-anotherCrc32
-
-			fmt.Println("fromCrc32val, anotherCrc32, finalCrc32", fromCrc32val, md5outVal, finalCrc32)
 
 			res := fromCrc32val.(string) + "~" + finalCrc32.(string)
 			fmt.Println("RESULT", res)
@@ -64,8 +63,6 @@ func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{}, wg *
 
 	res := DataSignerMd5(val2)
 
-	fmt.Println("res val md5Wrapper", res, val)
-
 	out <- res
 
 	<-quota
@@ -78,12 +75,10 @@ func crc32Wrapper2(val interface{}, out chan interface{}, wg *sync.WaitGroup) {
 		tmp := val.(int)
 		val2 := strconv.Itoa(int(tmp))
 		res := DataSignerCrc32(val2)
-		fmt.Println("res val crc32Wrapper2", res, val)
 		out <- res
 	case string:
 		tmp := val.(string)
 		res := DataSignerCrc32(tmp)
-		fmt.Println("res val crc32Wrapper2", res, val)
 		out <- res
 	default:
 		fmt.Println("val is of unknown type")
@@ -100,14 +95,12 @@ func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *syn
 		res := DataSignerCrc32(val2)
 
 		res_2 := strconv.Itoa(i) + "_" + res
-		fmt.Println("res_2 val ctc32WrapperMultiHash", res_2, val)
 		out <- res_2
 	case string:
 		tmp := val.(string)
 		res := DataSignerCrc32(tmp)
 
 		res_2 := strconv.Itoa(i) + "_" + res
-		fmt.Println("res_2 val ctc32WrapperMultiHash", res_2, val)
 		out <- res_2
 	default:
 		fmt.Println("val is of unknown type")
@@ -126,11 +119,28 @@ func MultiHash(in, out chan interface{}) {
 
 			for i := 0; i < 6; i++ {
 				go func(i int, val interface{}) {
-					fmt.Println("MULTIHASH VAL", val)
 
-					toF := strconv.Itoa(i) + val.(string)
+					switch val.(type) {
+					case int:
+						tmp := val.(int)
+						val2 := strconv.Itoa(int(tmp))
+						res := DataSignerCrc32(val2)
+						out <- res
 
-					ctc32WrapperMultiHash(toF, i, hashingOut, &wg)
+						fmt.Println("MULTIHASH VAL", val)
+
+						toF := strconv.Itoa(i) + strconv.Itoa(val.(int))
+
+						ctc32WrapperMultiHash(toF, i, hashingOut, &wg)
+					case string:
+						fmt.Println("MULTIHASH VAL", val)
+
+						toF := strconv.Itoa(i) + val.(string)
+
+						ctc32WrapperMultiHash(toF, i, hashingOut, &wg)
+					default:
+						fmt.Println("val is of unknown type")
+					}
 
 				}(i, val)
 			}
@@ -198,6 +208,11 @@ func ExecutePipeline(jobs ...job) {
 			j(in, out)
 			// close(out)
 		}(j, in, out)
+
+		// go func() {
+		// 	wg.Wait()
+		// 	close(out)
+		// }()
 		in = out
 
 	}
