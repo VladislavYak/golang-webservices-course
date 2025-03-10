@@ -116,7 +116,7 @@ func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *syn
 }
 
 func MultiHash(in, out chan interface{}) {
-
+	fmt.Println("MULTIHASH START")
 	for val := range in {
 
 		hashingOut := make(chan interface{})
@@ -130,10 +130,10 @@ func MultiHash(in, out chan interface{}) {
 
 					switch val.(type) {
 					case int:
-						tmp := val.(int)
-						val2 := strconv.Itoa(int(tmp))
-						res := DataSignerCrc32(val2)
-						out <- res
+						// tmp := val.(int)
+						// val2 := strconv.Itoa(int(tmp))
+						// res := DataSignerCrc32(val2)
+						// out <- res
 
 						fmt.Println("MULTIHASH VAL", val)
 
@@ -155,6 +155,7 @@ func MultiHash(in, out chan interface{}) {
 
 			go func() {
 				wg.Wait()
+				fmt.Println("closing multihash")
 				close(hashingOut)
 			}()
 
