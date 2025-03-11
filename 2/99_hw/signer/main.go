@@ -13,12 +13,12 @@ import (
 
 func main() {
 
-	inputData := []int{0, 1, 3}
+	inputData := []int{0, 1}
 
 	hashSignJobs := []job{
 		job(func(in, out chan interface{}) {
-			fmt.Println("inputData", inputData)
 			for _, fibNum := range inputData {
+				// time.Sleep(time.Second * 2)
 				fmt.Println("fibNum", fibNum)
 				out <- fibNum
 				fmt.Println("gen after insertion")
@@ -27,18 +27,8 @@ func main() {
 			fmt.Println("below loop generator")
 		}),
 		job(SingleHash),
-		// job(MultiHash),
-		// job(CombineResults),
-		job(func(in, out chan interface{}) {
-			fmt.Println("final function before reading 1")
-			for val := range in {
-				fmt.Println("val final 1", val)
-
-				out <- val
-			}
-			fmt.Println("after final loop 1")
-		}),
-
+		job(MultiHash),
+		job(CombineResults),
 		job(func(in, out chan interface{}) {
 			fmt.Println("fin read")
 			for val := range in {
@@ -55,5 +45,5 @@ func main() {
 	end := time.Since(start)
 	fmt.Println("end", end)
 
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 20)
 }
