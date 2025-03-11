@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // 4108050209~502633748
@@ -16,23 +17,26 @@ func SingleHash(in chan interface{}, out chan interface{}) {
 
 	// closeChWg := sync.WaitGroup{}
 
+	sh_wg := sync.WaitGroup{}
+
 	for val := range in {
-		fmt.Println("SingleHash | SingleHash, val", val)
+		sh_wg.Add(1)
+		// fmt.Println("SingleHash | SingleHash, val", val)
 		crc32OutCh := make(chan interface{})
 		md5OutCh := make(chan interface{})
 		anotherCrc32 := make(chan interface{})
 		wg := sync.WaitGroup{}
 		wg.Add(3)
 		go func(val interface{}) {
+			defer sh_wg.Done()
 
-			wg.Add(3)
 			go crc32Wrapper2(val, crc32OutCh, &wg)
 			go md5Wrapper(val, quotaCh, md5OutCh, &wg)
 
 			fromCrc32val := <-crc32OutCh
 			md5outVal := <-md5OutCh
 
-			fmt.Println("SingleHash | fromCrc32val, anotherCrc32", fromCrc32val, md5outVal)
+			// fmt.Println("SingleHash | fromCrc32val, anotherCrc32", fromCrc32val, md5outVal)
 
 			// anotherCrc32 := make(chan interface{})
 
@@ -40,12 +44,12 @@ func SingleHash(in chan interface{}, out chan interface{}) {
 
 			finalCrc32 := <-anotherCrc32
 
-			fmt.Println("SingleHash| finalCrc32", finalCrc32)
+			// fmt.Println("SingleHash| finalCrc32", finalCrc32)
 
 			res := fromCrc32val.(string) + "~" + finalCrc32.(string)
 			fmt.Println("SingleHash | RESULT", res)
-			out <- res
 			wg.Wait()
+			out <- res
 
 		}(val)
 
@@ -57,6 +61,7 @@ func SingleHash(in chan interface{}, out chan interface{}) {
 
 	}
 
+	sh_wg.Wait()
 	fmt.Println("i can leave single Hash loop!")
 
 }
@@ -116,12 +121,17 @@ func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *syn
 }
 
 func MultiHash(in, out chan interface{}) {
+	time.Sleep(time.Second * 3)
 	fmt.Println("MULTIHASH START")
+
+	m_h_wg := sync.WaitGroup{}
 	for val := range in {
+		m_h_wg.Add(1)
 
 		hashingOut := make(chan interface{})
 
 		go func(val interface{}) {
+			defer m_h_wg.Done()
 			wg := sync.WaitGroup{}
 			wg.Add(6)
 
@@ -130,11 +140,6 @@ func MultiHash(in, out chan interface{}) {
 
 					switch val.(type) {
 					case int:
-						// tmp := val.(int)
-						// val2 := strconv.Itoa(int(tmp))
-						// res := DataSignerCrc32(val2)
-						// out <- res
-
 						fmt.Println("MULTIHASH VAL", val)
 
 						toF := strconv.Itoa(i) + strconv.Itoa(val.(int))
@@ -172,6 +177,8 @@ func MultiHash(in, out chan interface{}) {
 		}(val)
 
 	}
+	m_h_wg.Wait()
+	fmt.Println("i can leave MULTIHASH")
 
 }
 
@@ -277,24 +284,58 @@ func ExecutePipeline2(jobs ...job) {
 
 	in := make(chan interface{})
 
+	mainWg := sync.WaitGroup{}
+	mainWg.Add(len(jobs))
+
 	for _, myJob := range jobs {
 		out := make(chan interface{})
-		myWg := sync.WaitGroup{}
-		myWg.Add(1)
+		wg := sync.WaitGroup{}
+		wg.Add(1)
 
-		go func(in, out chan interface{}, wg *sync.WaitGroup, j job) {
+		go func(in, out chan interface{}, j job) {
+			fmt.Println("for j in out", j, in, out)
 			defer wg.Done()
-			j(in, out)
-		}(in, out, &myWg, myJob)
+			defer mainWg.Done()
 
-		go func(wg *sync.WaitGroup, myOut chan interface{}) {
-			wg.Wait()
-			close(myOut)
-		}(&myWg, out)
+			j(in, out)
+
+		}(in, out, myJob)
 
 		in = out
+
+		go func(out chan interface{}, j job) {
+			fmt.Println("im waiting for myJob", j)
+			wg.Wait()
+			fmt.Println("closing out myJob, out", j, out)
+			close(out)
+		}(out, myJob)
+
 	}
+
+	mainWg.Wait()
 }
+
+// hashSignJobs := []job{
+// 	job(func(in, out chan interface{}) {
+// 		for _, fibNum := range inputData {
+// 			fmt.Println("fibNum", fibNum)
+// 			out <- fibNum
+// 			fmt.Println("gen after insertion")
+// 		}
+
+// 		fmt.Println("below loop generator")
+// 	}),
+// 	job(SingleHash),
+// 	// job(MultiHash),
+// 	// job(CombineResults),
+// 	job(func(in, out chan interface{}) {
+// 		fmt.Println("fin read")
+// 		for val := range in {
+// 			fmt.Println("val final 2", val)
+// 		}
+// 		fmt.Println("after fin")
+// 	}),
+// }
 
 func ExecutePipeline(jobs ...job) {
 
