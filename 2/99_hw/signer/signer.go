@@ -19,23 +19,22 @@ func SingleHash(in chan interface{}, out chan interface{}) {
 		crc32OutCh := make(chan interface{})
 		md5OutCh := make(chan interface{})
 		anotherCrc32 := make(chan interface{})
-		wg := sync.WaitGroup{}
-		wg.Add(3)
 		go func(val interface{}) {
 			defer sh_wg.Done()
 
-			go crc32Wrapper2(val, crc32OutCh, &wg)
-			go md5Wrapper(val, quotaCh, md5OutCh, &wg)
+			go crc32Wrapper2(val, crc32OutCh)
+
+			go md5Wrapper(val, quotaCh, md5OutCh)
 
 			fromCrc32val := <-crc32OutCh
 			md5outVal := <-md5OutCh
 
-			go crc32Wrapper2(md5outVal, anotherCrc32, &wg)
+			go crc32Wrapper2(md5outVal, anotherCrc32)
 
 			finalCrc32 := <-anotherCrc32
 
 			res := fromCrc32val.(string) + "~" + finalCrc32.(string)
-			wg.Wait()
+			// wg.Wait()
 			out <- res
 
 		}(val)
@@ -45,8 +44,7 @@ func SingleHash(in chan interface{}, out chan interface{}) {
 	sh_wg.Wait()
 }
 
-func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{}, wg *sync.WaitGroup) {
-	defer wg.Done()
+func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{}) {
 	quota <- struct{}{}
 
 	tmp := val.(int)
@@ -59,12 +57,11 @@ func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{}, wg *
 	<-quota
 }
 
-func crc32Wrapper2(val interface{}, out chan interface{}, wg *sync.WaitGroup) {
-	defer wg.Done()
+func crc32Wrapper2(val interface{}, out chan interface{}) {
 	switch val.(type) {
 	case int:
 		tmp := val.(int)
-		val2 := strconv.Itoa(int(tmp))
+		val2 := strconv.Itoa(tmp)
 		res := DataSignerCrc32(val2)
 		out <- res
 	case string:
@@ -82,7 +79,7 @@ func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *syn
 	switch val.(type) {
 	case int:
 		tmp := val.(int)
-		val2 := strconv.Itoa(int(tmp))
+		val2 := strconv.Itoa(tmp)
 		res := DataSignerCrc32(val2)
 
 		res_2 := strconv.Itoa(i) + "_" + res
