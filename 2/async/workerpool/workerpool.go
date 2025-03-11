@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const goroutinesNum = 3
+const goroutinesNum = 4
 
 func startWorker(workerNum int, in <-chan string) {
 	for input := range in {
@@ -18,8 +18,8 @@ func startWorker(workerNum int, in <-chan string) {
 }
 
 func main() {
-	runtime.GOMAXPROCS(0)               // попробуйте с 0 (все доступные) и 1
-	worketInput := make(chan string, 2) // попробуйте увеличить размер канала
+	// runtime.GOMAXPROCS(0)               // попробуйте с 0 (все доступные) и 1
+	worketInput := make(chan string) // попробуйте увеличить размер канала
 	for i := 0; i < goroutinesNum; i++ {
 		go startWorker(i, worketInput)
 	}
