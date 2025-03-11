@@ -13,12 +13,11 @@ import (
 
 func main() {
 
-	inputData := []int{0, 1}
+	inputData := []int{0, 1, 1, 2, 3, 5, 8}
 
 	hashSignJobs := []job{
 		job(func(in, out chan interface{}) {
 			for _, fibNum := range inputData {
-				// time.Sleep(time.Second * 2)
 				fmt.Println("fibNum", fibNum)
 				out <- fibNum
 				fmt.Println("gen after insertion")
@@ -40,10 +39,8 @@ func main() {
 
 	start := time.Now()
 
-	ExecutePipeline2(hashSignJobs...)
+	ExecutePipeline(hashSignJobs...)
 
 	end := time.Since(start)
 	fmt.Println("end", end)
-
-	time.Sleep(time.Second * 20)
 }

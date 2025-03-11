@@ -6,22 +6,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
-// 4108050209~502633748
-// 2212294583~709660146
 func SingleHash(in chan interface{}, out chan interface{}) {
 
 	quotaCh := make(chan struct{}, 1)
-
-	// closeChWg := sync.WaitGroup{}
 
 	sh_wg := sync.WaitGroup{}
 
 	for val := range in {
 		sh_wg.Add(1)
-		// fmt.Println("SingleHash | SingleHash, val", val)
 		crc32OutCh := make(chan interface{})
 		md5OutCh := make(chan interface{})
 		anotherCrc32 := make(chan interface{})
@@ -36,37 +30,21 @@ func SingleHash(in chan interface{}, out chan interface{}) {
 			fromCrc32val := <-crc32OutCh
 			md5outVal := <-md5OutCh
 
-			// fmt.Println("SingleHash | fromCrc32val, anotherCrc32", fromCrc32val, md5outVal)
-
-			// anotherCrc32 := make(chan interface{})
-
 			go crc32Wrapper2(md5outVal, anotherCrc32, &wg)
 
 			finalCrc32 := <-anotherCrc32
 
-			// fmt.Println("SingleHash| finalCrc32", finalCrc32)
-
 			res := fromCrc32val.(string) + "~" + finalCrc32.(string)
-			fmt.Println("SingleHash | RESULT", res)
 			wg.Wait()
 			out <- res
 
 		}(val)
 
-		// crc32Wrapper2(anotherCrc32, anotherCrc32)
-
-		// finalCrc32val := <-anotherCrc32
-
-		// fmt.Println(finalCrc32val.(string) + "~" + fromCrc32val)
-
 	}
 
 	sh_wg.Wait()
-	fmt.Println("i can leave single Hash loop!")
-
 }
 
-// md5 wrapper
 func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	quota <- struct{}{}
@@ -121,9 +99,6 @@ func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *syn
 }
 
 func MultiHash(in, out chan interface{}) {
-	time.Sleep(time.Second * 3)
-	fmt.Println("MULTIHASH START")
-
 	m_h_wg := sync.WaitGroup{}
 	for val := range in {
 		m_h_wg.Add(1)
@@ -140,13 +115,10 @@ func MultiHash(in, out chan interface{}) {
 
 					switch val.(type) {
 					case int:
-						fmt.Println("MULTIHASH VAL", val)
-
 						toF := strconv.Itoa(i) + strconv.Itoa(val.(int))
 
 						ctc32WrapperMultiHash(toF, i, hashingOut, &wg)
 					case string:
-						fmt.Println("MULTIHASH VAL", val)
 
 						toF := strconv.Itoa(i) + val.(string)
 
@@ -160,25 +132,21 @@ func MultiHash(in, out chan interface{}) {
 
 			go func() {
 				wg.Wait()
-				fmt.Println("closing multihash")
 				close(hashingOut)
 			}()
 
 			myArr := []string{}
 			for h_val := range hashingOut {
-				fmt.Println("MultiHash hashingOut h_val, val", h_val, val)
 				myArr = append(myArr, h_val.(string))
 			}
 
 			result := FormatMultiHashResult(myArr)
-			fmt.Println("multiHash result", result)
 			out <- result
 
 		}(val)
 
 	}
 	m_h_wg.Wait()
-	fmt.Println("i can leave MULTIHASH")
 
 }
 
@@ -197,90 +165,18 @@ func FormatMultiHashResult(arr []string) string {
 	return res
 }
 
-// it gets arbitrary number of values as input and should process them concurrently
-// func CombineResults(data string) string {
-// 	// probably this func should take several values as input
-// 	sh := SingleHash(data)
-// 	res := []string{sh, MultiHash(sh)}
-
-// 	sort.Strings(res)
-// 	return strings.Join(res, "_")
-
-// }
 func CombineResults(in, out chan interface{}) {
-	fmt.Println("inside combine results")
 	res := []string{}
 	for val := range in {
-		fmt.Println("CombineResults val", val)
 		res = append(res, val.(string))
 	}
-	fmt.Println("combine results after looping")
 	sort.Strings(res)
 
-	finalString := strings.Join(res, "_")
-
-	fmt.Println("COMBINE RESULTS finalString", finalString)
-	out <- finalString
-
-	// close(in)
-	// close(out)
+	out <- strings.Join(res, "_")
 
 }
 
-func ExecutePipeline3(jobs ...job) {
-	in := make(chan interface{})
-	out := make(chan interface{})
-	myWg := sync.WaitGroup{}
-	myWg.Add(1)
-
-	go func(in, out chan interface{}, wg *sync.WaitGroup, j job) {
-		defer wg.Done()
-		j(in, out)
-	}(in, out, &myWg, jobs[0])
-
-	go func(wg *sync.WaitGroup, myOut chan interface{}) {
-		wg.Wait()
-		close(myOut)
-	}(&myWg, out)
-
-	myWg2 := sync.WaitGroup{}
-	myWg2.Add(1)
-	in = make(chan interface{})
-
-	go func(in, out chan interface{}, wg *sync.WaitGroup, j job) {
-		defer wg.Done()
-		j(in, out)
-	}(out, in, &myWg2, jobs[1])
-
-	// go func(in, out chan interface{}, wg *sync.WaitGroup, j job) {
-	// 	defer wg.Done()
-	// 	jobs[0](in, out)
-	// }(in, out, &myWg, myJob)
-
-	// go func(in, out chan interface{}) {
-	// 	jobs[0](in, out)
-	// }(out, in)
-}
-
-// for _, myJob := range jobs {
-// 	myWg := sync.WaitGroup{}
-// 	myWg.Add(1)
-
-// 	go func(in, out chan interface{}, wg *sync.WaitGroup, j job) {
-// 		defer wg.Done()
-// 		j(in, out)
-// 	}(in, out, &myWg, myJob)
-
-// 	go func(wg *sync.WaitGroup, myOut chan interface{}) {
-// 		wg.Wait()
-// 		close(myOut)
-// 	}(&myWg, out)
-
-// 	in = out
-// 	out = make(chan interface{})
-// }
-
-func ExecutePipeline2(jobs ...job) {
+func ExecutePipeline(jobs ...job) {
 
 	in := make(chan interface{})
 
@@ -293,7 +189,6 @@ func ExecutePipeline2(jobs ...job) {
 		wg.Add(1)
 
 		go func(in, out chan interface{}, j job) {
-			fmt.Println("for j in out", j, in, out)
 			defer wg.Done()
 			defer mainWg.Done()
 
@@ -304,77 +199,11 @@ func ExecutePipeline2(jobs ...job) {
 		in = out
 
 		go func(out chan interface{}, j job) {
-			fmt.Println("im waiting for myJob", j)
 			wg.Wait()
-			fmt.Println("closing out myJob, out", j, out)
 			close(out)
 		}(out, myJob)
 
 	}
 
 	mainWg.Wait()
-}
-
-// hashSignJobs := []job{
-// 	job(func(in, out chan interface{}) {
-// 		for _, fibNum := range inputData {
-// 			fmt.Println("fibNum", fibNum)
-// 			out <- fibNum
-// 			fmt.Println("gen after insertion")
-// 		}
-
-// 		fmt.Println("below loop generator")
-// 	}),
-// 	job(SingleHash),
-// 	// job(MultiHash),
-// 	// job(CombineResults),
-// 	job(func(in, out chan interface{}) {
-// 		fmt.Println("fin read")
-// 		for val := range in {
-// 			fmt.Println("val final 2", val)
-// 		}
-// 		fmt.Println("after fin")
-// 	}),
-// }
-
-func ExecutePipeline(jobs ...job) {
-
-	in := make(chan interface{})
-	for _, j := range jobs {
-		out := make(chan interface{})
-
-		innerWg := sync.WaitGroup{}
-		innerWg.Add(1)
-
-		go func(j job, in, out chan interface{}, wg *sync.WaitGroup) {
-			fmt.Println("ExecutePipeline | EXECUTION J ExecutePipeline goroutine here for j", j)
-			defer wg.Done()
-			// defer close(out)
-			// defer wg2.Done()
-			j(in, out)
-
-			fmt.Println("ExecutePipeline | after j", j)
-			// in = out
-			// close(out)
-		}(j, in, out, &innerWg)
-
-		go func(wg *sync.WaitGroup, j job) {
-			fmt.Println("ExecutePipeline | CLOSE ExecutePipeline goroutine here for j", j)
-			wg.Wait()
-			fmt.Println("ExecutePipeline | ive closed out", j)
-			close(out)
-			// in = out
-		}(&innerWg, j)
-
-		// close(out)
-
-		fmt.Println("ExecutePipeline | in = out for j", j)
-		fmt.Println("ExecutePipeline | ----")
-		in = out
-
-	}
-
-	// go func() {
-	// 	wg2.Wait()
-	// }()
 }
