@@ -26,12 +26,12 @@ func SingleHash(in chan interface{}, out chan interface{}) {
 
 			go md5Wrapper(val, quotaCh, md5OutCh)
 
-			fromCrc32val := <-crc32OutCh
 			md5outVal := <-md5OutCh
 
 			go crc32Wrapper2(md5outVal, anotherCrc32)
 
 			finalCrc32 := <-anotherCrc32
+			fromCrc32val := <-crc32OutCh
 
 			res := fromCrc32val.(string) + "~" + finalCrc32.(string)
 			// wg.Wait()

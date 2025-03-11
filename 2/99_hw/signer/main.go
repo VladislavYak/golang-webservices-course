@@ -13,7 +13,7 @@ import (
 
 func main() {
 
-	inputData := []int{0, 1, 1, 2, 3, 5, 8}
+	inputData := []int{0, 1, 1, 2, 3, 5, 8, 10, 15, 20, 22, 30, 35, 40, 45, 50, 55}
 
 	hashSignJobs := []job{
 		job(func(in, out chan interface{}) {
