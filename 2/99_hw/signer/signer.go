@@ -12,63 +12,60 @@ func SingleHash(in chan interface{}, out chan interface{}) {
 
 	quotaCh := make(chan struct{}, 1)
 
-	sh_wg := sync.WaitGroup{}
+	mainWgSH := sync.WaitGroup{}
 
 	for val := range in {
-		sh_wg.Add(1)
+		mainWgSH.Add(1)
 		crc32OutCh := make(chan interface{})
 		md5OutCh := make(chan interface{})
-		anotherCrc32 := make(chan interface{})
+		anotherCrc32OutCh := make(chan interface{})
 		go func(val interface{}) {
-			defer sh_wg.Done()
+			defer mainWgSH.Done()
 
-			go crc32Wrapper2(val, crc32OutCh)
+			go crc32Wrapper(val, crc32OutCh)
 
 			go md5Wrapper(val, quotaCh, md5OutCh)
 
 			md5outVal := <-md5OutCh
 
-			go crc32Wrapper2(md5outVal, anotherCrc32)
+			go crc32Wrapper(md5outVal, anotherCrc32OutCh)
 
-			finalCrc32 := <-anotherCrc32
+			finalCrc32 := <-anotherCrc32OutCh
 			fromCrc32val := <-crc32OutCh
 
-			res := fromCrc32val.(string) + "~" + finalCrc32.(string)
-			// wg.Wait()
-			out <- res
-
+			out <- fromCrc32val.(string) + "~" + finalCrc32.(string)
 		}(val)
 
 	}
 
-	sh_wg.Wait()
+	mainWgSH.Wait()
 }
 
 func md5Wrapper(val interface{}, quota chan struct{}, out chan interface{}) {
 	quota <- struct{}{}
 
-	tmp := val.(int)
-	val2 := strconv.Itoa(int(tmp))
-
-	res := DataSignerMd5(val2)
-
-	out <- res
+	switch val.(type) {
+	case string:
+		out <- DataSignerMd5(val.(string))
+	case int:
+		tmp := strconv.Itoa(val.(int))
+		out <- DataSignerMd5(tmp)
+	default:
+		// yakovlev neet to raise error somehow
+	}
 
 	<-quota
 }
 
-func crc32Wrapper2(val interface{}, out chan interface{}) {
+func crc32Wrapper(val interface{}, out chan interface{}) {
 	switch val.(type) {
 	case int:
-		tmp := val.(int)
-		val2 := strconv.Itoa(tmp)
-		res := DataSignerCrc32(val2)
-		out <- res
+		val2 := strconv.Itoa(val.(int))
+		out <- DataSignerCrc32(val2)
 	case string:
-		tmp := val.(string)
-		res := DataSignerCrc32(tmp)
-		out <- res
+		out <- DataSignerCrc32(val.(string))
 	default:
+		// yakovlev: need to raise error somehow
 		fmt.Println("val is of unknown type")
 	}
 }
@@ -91,19 +88,20 @@ func ctc32WrapperMultiHash(val interface{}, i int, out chan interface{}, wg *syn
 		res_2 := strconv.Itoa(i) + "_" + res
 		out <- res_2
 	default:
+		// yakovlev: need to raise error somehow
 		fmt.Println("val is of unknown type")
 	}
 }
 
 func MultiHash(in, out chan interface{}) {
-	m_h_wg := sync.WaitGroup{}
+	mainWgMh := sync.WaitGroup{}
 	for val := range in {
-		m_h_wg.Add(1)
+		mainWgMh.Add(1)
 
-		hashingOut := make(chan interface{})
+		hashingOutCh := make(chan interface{})
 
 		go func(val interface{}) {
-			defer m_h_wg.Done()
+			defer mainWgMh.Done()
 			wg := sync.WaitGroup{}
 			wg.Add(6)
 
@@ -112,15 +110,15 @@ func MultiHash(in, out chan interface{}) {
 
 					switch val.(type) {
 					case int:
-						toF := strconv.Itoa(i) + strconv.Itoa(val.(int))
+						convertedVal := strconv.Itoa(i) + strconv.Itoa(val.(int))
 
-						ctc32WrapperMultiHash(toF, i, hashingOut, &wg)
+						ctc32WrapperMultiHash(convertedVal, i, hashingOutCh, &wg)
 					case string:
+						convertedVal := strconv.Itoa(i) + val.(string)
 
-						toF := strconv.Itoa(i) + val.(string)
-
-						ctc32WrapperMultiHash(toF, i, hashingOut, &wg)
+						ctc32WrapperMultiHash(convertedVal, i, hashingOutCh, &wg)
 					default:
+						// yakovlev: need to raise error somehow
 						fmt.Println("val is of unknown type")
 					}
 
@@ -129,21 +127,20 @@ func MultiHash(in, out chan interface{}) {
 
 			go func() {
 				wg.Wait()
-				close(hashingOut)
+				close(hashingOutCh)
 			}()
 
 			myArr := []string{}
-			for h_val := range hashingOut {
+			for h_val := range hashingOutCh {
 				myArr = append(myArr, h_val.(string))
 			}
 
-			result := FormatMultiHashResult(myArr)
-			out <- result
+			out <- FormatMultiHashResult(myArr)
 
 		}(val)
 
 	}
-	m_h_wg.Wait()
+	mainWgMh.Wait()
 
 }
 
