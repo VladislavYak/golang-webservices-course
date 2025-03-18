@@ -8,16 +8,17 @@ import (
 )
 
 // тут писать SearchServer
+// FindUsers отправляет запрос во внешнюю систему (на самом деле в searchServer, (по сути в Мок))
+
+// по сути, это мок внешней апи, которая отдавал бы данные
+func SearchServer() {
+
+}
 
 type Rows struct {
 	Version string `xml:"version,attr"`
 	List    []Row  `xml:"row"`
 }
-
-// ID      int    `xml:"id,attr"`
-// Login   string `xml:"login"`
-// Name    string `xml:"name"`
-// Browser string `xml:"browser"`
 
 type customTime struct {
 	time.Time
