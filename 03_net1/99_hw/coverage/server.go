@@ -3,16 +3,42 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 )
 
+// order_by=-1&order_field=age&limit=1&offset=0&query=on
 // тут писать SearchServer
 // FindUsers отправляет запрос во внешнюю систему (на самом деле в searchServer, (по сути в Мок))
+func MainPage(w http.ResponseWriter, r *http.Request) {
+	parsedUrl := r.URL.Query()
+	orderBy := parsedUrl.Get("order_by")
+	orderField := parsedUrl.Get("order_field")
+	limit := parsedUrl.Get("limit")
+	offset := parsedUrl.Get("offset")
+	query := parsedUrl.Get("query")
+
+	fmt.Fprintln(w, "hey")
+	fmt.Fprintln(w, "orderBy:", orderBy)
+	fmt.Fprintln(w, "orderField:", orderField)
+	fmt.Fprintln(w, "limit:", limit)
+	fmt.Fprintln(w, "offset:", offset)
+	fmt.Fprintln(w, "query:", query)
+
+}
 
 // по сути, это мок внешней апи, которая отдавал бы данные
 func SearchServer() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/",
+		MainPage)
 
+	server := http.Server{
+		Handler: mux,
+	}
+
+	server.ListenAndServe()
 }
 
 type Rows struct {
@@ -56,6 +82,10 @@ type Row struct {
 	FavoriteFruit string     `xml:"favoriteFruit"`
 }
 
+func (r *Row) Name() string {
+	return r.FirstName + " " + r.LastName
+}
+
 func readXml(path string) (Rows, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -74,12 +104,13 @@ func readXml(path string) (Rows, error) {
 }
 
 func main() {
-	myFile, _ := readXml("/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml")
+	// myFile, _ := readXml("/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml")
 
 	// fmt.Println("myFile", myFile)
 
-	for _, v := range myFile.List {
-		fmt.Println("v.Registered", v.Registered)
-	}
-	fmt.Println("res", myFile.List[0].LastName)
+	// for _, v := range myFile.List {
+	// 	fmt.Println("v.Registered", v.Registered)
+	// }
+	// fmt.Println("res", myFile.List[0].LastName)
+	SearchServer()
 }
