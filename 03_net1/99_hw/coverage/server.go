@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -26,6 +27,13 @@ func MainPage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "offset:", offset)
 	fmt.Fprintln(w, "query:", query)
 
+	myFile, _ := readXml("/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml")
+
+	v := myFile.List
+
+	out, _ := json.Marshal(v[0])
+	fmt.Fprintln(w, "random marshal:", string(out))
+	fmt.Println("myFile", myFile)
 }
 
 // по сути, это мок внешней апи, которая отдавал бы данные
