@@ -37,15 +37,20 @@ func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
 	values := data.List
 
 	// yakovlev: try to preinit p, pass it to parseParams (like unmarshal does)
-	p := parseParams(r)
+	p, err := parseParams(r)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+	}
 
-	res := new([]Row)
-	QueryProcessing(&p, &values, res)
+	res := QueryProcessing(&p, &values)
+
 	fmt.Fprintf(w, "%+v\n", res)
 
 }
 
-func QueryProcessing(p *params, rows *[]Row, res *[]Row) {
+func QueryProcessing(p *params, rows *[]Row) *[]Row {
+
+	res := new([]Row)
 	if p.query != "" {
 		for _, row := range *rows {
 			r := NewRow(&row)
@@ -56,6 +61,7 @@ func QueryProcessing(p *params, rows *[]Row, res *[]Row) {
 	} else {
 		res = rows
 	}
+	return res
 }
 
 func main() {

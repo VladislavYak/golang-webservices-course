@@ -1,6 +1,11 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+	"slices"
+
+	"github.com/go-faster/errors"
+)
 
 type params struct {
 	query       string
@@ -11,15 +16,25 @@ type params struct {
 	limit    string
 }
 
-func parseParams(r *http.Request) params {
+func parseParams(r *http.Request) (params, error) {
 	parsedUrl := r.URL.Query()
+
+	orderField := parsedUrl.Get("order_field")
+	if orderField == "" {
+		orderField = "Name"
+	}
+
+	allowed := []string{"Id", "Age", "Name"}
+	if !slices.Contains(allowed, orderField) {
+		return params{}, errors.New("invalid param")
+	}
 
 	p := params{
 		order_by:    parsedUrl.Get("order_by"),
-		order_field: parsedUrl.Get("order_field"),
+		order_field: orderField,
 		limit:       parsedUrl.Get("limit"),
 		offset:      parsedUrl.Get("offset"),
 		query:       parsedUrl.Get("query"),
 	}
-	return p
+	return p, nil
 }
