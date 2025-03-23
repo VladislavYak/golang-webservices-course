@@ -67,6 +67,14 @@ func readXml(path string) (Rows, error) {
 		return Rows{}, err
 	}
 
+	newRows := []Row{}
+	for _, row := range rows.List {
+		r := NewRow(&row)
+		newRows = append(newRows, *r)
+	}
+
+	rows.List = newRows
+
 	return *rows, nil
 
 }
