@@ -44,7 +44,11 @@ func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
 	}
 
 	res = QueryProcessing(p, res)
-	res = Sorting(p, res)
+
+	// this is bad code :0
+	if p.order_by != "" {
+		res = Sorting(p, res)
+	}
 
 	fmt.Fprintf(w, "%+v\n", res)
 
@@ -67,21 +71,32 @@ func QueryProcessing(p *params, rows []Row) []Row {
 
 // {"Id", "Age", "Name"}
 func Sorting(p *params, rows []Row) []Row {
-
+	// жесткий говнокод
 	switch p.order_field {
 	case "Id":
 		sort.Slice(rows, func(i, j int) bool {
-			return rows[i].Id < rows[j].Id
+			if p.order_by == "-1" {
+				return rows[i].Id < rows[j].Id
+			} else {
+				return rows[i].Id > rows[j].Id
+			}
 		})
 
 	case "Age":
 		sort.Slice(rows, func(i, j int) bool {
-			return rows[i].Age < rows[j].Age
+			if p.order_by == "-1" {
+				return rows[i].Age < rows[j].Age
+			} else {
+				return rows[i].Age > rows[j].Age
+			}
 		})
 	case "Name":
-		fmt.Println("i was here NAME")
 		sort.Slice(rows, func(i, j int) bool {
-			return rows[i].Name < rows[j].Name
+			if p.order_by == "-1" {
+				return rows[i].Name < rows[j].Name
+			} else {
+				return rows[i].Name > rows[j].Name
+			}
 		})
 
 	}
