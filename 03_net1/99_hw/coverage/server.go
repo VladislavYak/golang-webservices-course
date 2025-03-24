@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -48,6 +49,14 @@ func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
 	// this is bad code :0
 	if p.order_by != "" {
 		res = Sorting(p, res)
+	}
+
+	if p.offset != "" {
+		res = Offset(p, res)
+	}
+
+	if p.limit != "" {
+		res = Limit(p, res)
 	}
 
 	fmt.Fprintf(w, "%+v\n", res)
@@ -101,6 +110,28 @@ func Sorting(p *params, rows []Row) []Row {
 
 	}
 	return rows
+}
+
+func Offset(p *params, rows []Row) []Row {
+	offset, _ := strconv.Atoi(p.offset)
+	// add error handling
+
+	if len(rows)-1 > offset {
+		return rows[offset:]
+	} else {
+		return []Row{}
+	}
+}
+
+func Limit(p *params, rows []Row) []Row {
+	limit, _ := strconv.Atoi(p.limit)
+
+	if limit > len(rows) {
+		return rows
+	}
+	// add error handling
+	// validate bounds
+	return rows[:limit]
 }
 
 func main() {
