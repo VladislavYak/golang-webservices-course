@@ -44,7 +44,9 @@ func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 	}
 
-	res = QueryProcessing(p, res)
+	if p.query != "" {
+		res = QueryProcessing(p, res)
+	}
 
 	// this is bad code :0
 	if p.order_by != "" {
@@ -66,14 +68,10 @@ func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
 func QueryProcessing(p *params, rows []Row) []Row {
 
 	res := []Row{}
-	if p.query != "" {
-		for _, row := range rows {
-			if (strings.Contains(row.Name, p.query)) || (strings.Contains(row.About, p.query)) {
-				res = append(res, row)
-			}
+	for _, row := range rows {
+		if (strings.Contains(row.Name, p.query)) || (strings.Contains(row.About, p.query)) {
+			res = append(res, row)
 		}
-	} else {
-		res = rows
 	}
 	return res
 }
