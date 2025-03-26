@@ -2,9 +2,6 @@ package main
 
 import (
 	"net/http"
-	"slices"
-
-	"github.com/go-faster/errors"
 )
 
 type params struct {
@@ -22,11 +19,6 @@ func parseParams(r *http.Request) (*params, error) {
 	orderField := parsedUrl.Get("order_field")
 	if orderField == "" {
 		orderField = "Name"
-	}
-
-	allowed := []string{"Id", "Age", "Name"}
-	if !slices.Contains(allowed, orderField) {
-		return &params{}, errors.New("invalid param")
 	}
 
 	p := params{
