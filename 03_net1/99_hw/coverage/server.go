@@ -1,4 +1,4 @@
-package main
+package teststests
 
 // yakovlev useful readings
 // https://gowebexamples.com/forms/
@@ -29,7 +29,7 @@ func SearchServer(datapath string) {
 		Handler: mux,
 	}
 	err := server.ListenAndServe()
-	fmt.Println("%v", err)
+	fmt.Printf("%v", err)
 }
 
 // order_by=-1&order_field=age&limit=1&offset=0&query=on
@@ -154,8 +154,8 @@ func Limit(p *params, rows []Row) ([]Row, error) {
 	}
 }
 
-func main() {
-	xml_path := "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
+// func main() {
+// 	xml_path := "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
 
-	SearchServer(xml_path)
-}
+// 	SearchServer(xml_path)
+// }
