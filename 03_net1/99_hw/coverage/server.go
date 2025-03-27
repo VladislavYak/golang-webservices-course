@@ -5,6 +5,7 @@ package main
 // https://gowebexamples.com/sessions/
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -59,7 +60,19 @@ func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 	}
 
-	fmt.Fprintf(w, "%+v\n", res)
+	// fmt.Fprintf(w, "%+v\n", res)
+
+	// fmt.Println("res", res)
+
+	// res2 := `{ID: 1, User: "Vlad", Age: 49, About: "xui s gori", Gender: "male"}`
+
+	jsonResponse, err := json.Marshal(res)
+	// fmt.Println("jsonResponse", string(jsonResponse))
+	if err != nil {
+		fmt.Println("err MainPage", err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
 
 }
 
@@ -154,8 +167,8 @@ func Limit(p *params, rows []Row) ([]Row, error) {
 	}
 }
 
-// func main() {
-// 	xml_path := "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
+func main() {
+	xml_path := "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
 
-// 	SearchServer(xml_path)
-// }
+	SearchServer(xml_path)
+}

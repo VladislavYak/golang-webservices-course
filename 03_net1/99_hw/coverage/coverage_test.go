@@ -17,8 +17,17 @@ func TestSearchServer(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, &myData)
 	}))
-	fmt.Println("uxixui")
-	fmt.Print(ts.URL)
+	fmt.Println(ts.URL)
+
+	sr := SearchRequest{Limit: 5}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: "xuixui"}
+	response, err := sc.FindUsers(sr)
+	if err != nil {
+		fmt.Println("err", err)
+	}
+
+	fmt.Println("len(response)", len(response.Users))
 	time.Sleep(60 * time.Second)
 }
 
