@@ -1,4 +1,4 @@
-package teststests
+package main
 
 import (
 	"encoding/xml"

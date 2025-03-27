@@ -1,10 +1,11 @@
-package teststests
+package main
 
 import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // тут писать код тестов
@@ -18,7 +19,7 @@ func TestSearchServer(t *testing.T) {
 	}))
 	fmt.Println("uxixui")
 	fmt.Print(ts.URL)
-	// time.Sleep(60 * time.Second)
+	time.Sleep(60 * time.Second)
 }
 
 // func TestCartCheckout(t *testing.T) {

@@ -1,4 +1,4 @@
-package teststests
+package main
 
 // yakovlev useful readings
 // https://gowebexamples.com/forms/
