@@ -26,11 +26,29 @@ func SearchServer(datapath string) {
 		},
 	)
 
+	m := AuthMiddleware(mux)
+
 	server := http.Server{
-		Handler: mux,
+		Handler: m,
 	}
+
 	err := server.ListenAndServe()
 	fmt.Printf("%v", err)
+}
+
+func AuthMiddleware(h http.Handler) http.Handler {
+	VALID_TOKEN := "mytoken"
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("AccessToken")
+
+		if token != VALID_TOKEN {
+			http.Error(w, "StatusUnauthorized", http.StatusUnauthorized)
+		} else {
+			h.ServeHTTP(w, r)
+		}
+
+	})
 }
 
 // order_by=-1&order_field=age&limit=1&offset=0&query=on

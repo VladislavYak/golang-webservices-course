@@ -5,87 +5,94 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 // тут писать код тестов
 
-func TestSearchServer(t *testing.T) {
-	xml_path := "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
-	myData, _ := readXml(xml_path)
+const XML_PATH = "./dataset.xml"
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestSearchServer(t *testing.T) {
+	myData, _ := readXml(XML_PATH)
+
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, &myData)
-	}))
-	fmt.Println(ts.URL)
+	})))
 
 	sr := SearchRequest{Limit: 5}
 
-	sc := SearchClient{URL: ts.URL, AccessToken: "xuixui"}
-	response, err := sc.FindUsers(sr)
+	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	_, err := sc.FindUsers(sr)
 	if err != nil {
 		fmt.Println("err", err)
 	}
 
-	fmt.Println("len(response)", len(response.Users))
-	time.Sleep(60 * time.Second)
 }
 
-// func TestCartCheckout(t *testing.T) {
-// 	cases := []TestCase{
-// 		{
-// 			ID: "42",
-// 			Result: &CheckoutResult{
-// 				Status:  200,
-// 				Balance: 100500,
-// 				Err:     "",
-// 			},
-// 			IsError: false,
-// 		},
-// 		{
-// 			ID: "100500",
-// 			Result: &CheckoutResult{
-// 				Status:  400,
-// 				Balance: 0,
-// 				Err:     "bad_balance",
-// 			},
-// 			IsError: false,
-// 		},
-// 		{
-// 			ID:      "__broken_json",
-// 			Result:  nil,
-// 			IsError: true,
-// 		},
-// 		{
-// 			ID:      "__internal_error",
-// 			Result:  nil,
-// 			IsError: true,
-// 		},
-// 	}
+func TestSearchServerLimitLessZero(t *testing.T) {
+	myData, _ := readXml(XML_PATH)
 
-// 	ts := httptest.NewServer(http.HandlerFunc(CheckoutDummy))
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, &myData)
+	})))
 
-// 	fmt.Print(ts.URL)
-// 	time.Sleep(60 * time.Second)
+	sr := SearchRequest{Limit: -7}
 
-// 	for caseNum, item := range cases {
-// 		c := &Cart{
-// 			PaymentApiURL: ts.URL,
-// 		}
-// 		result, err := c.Checkout(item.ID)
+	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	_, err := sc.FindUsers(sr)
 
-// 		fmt.Println("result", result)
-// 		fmt.Println("----")
+	if err == nil {
+		t.Error("limit cannot be less then one")
+	}
+}
 
-// 		if err != nil && !item.IsError {
-// 			t.Errorf("[%d] unexpected error: %#v", caseNum, err)
-// 		}
-// 		if err == nil && item.IsError {
-// 			t.Errorf("[%d] expected error, got nil", caseNum)
-// 		}
-// 		if !reflect.DeepEqual(item.Result, result) {
-// 			t.Errorf("[%d] wrong result, expected %#v, got %#v", caseNum, item.Result, result)
-// 		}
-// 	}
-// 	ts.Close()
-// }
+func TestSearchServerLimitMore25(t *testing.T) {
+	myData, _ := readXml(XML_PATH)
+
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, &myData)
+	})))
+
+	sr := SearchRequest{Limit: 100}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	res, _ := sc.FindUsers(sr)
+
+	if len(res.Users) != 25 {
+		t.Error("Cannot be more then 25")
+	}
+
+}
+
+func TestSearchServerOffsetLess0(t *testing.T) {
+	myData, _ := readXml(XML_PATH)
+
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, &myData)
+	})))
+
+	sr := SearchRequest{Offset: -20}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	resp, err := sc.FindUsers(sr)
+
+	if err == nil && len(resp.Users) != 0 {
+		t.Error("Offset cannot be less then 0")
+	}
+}
+
+func TestSearchServerAuthError(t *testing.T) {
+	myData, _ := readXml(XML_PATH)
+
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, &myData)
+	})))
+
+	sr := SearchRequest{Offset: 10}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: "invalidToken"}
+	resp, err := sc.FindUsers(sr)
+
+	if err == nil && len(resp.Users) != 0 {
+		t.Error("Passed invalidToken")
+	}
+}
