@@ -23,7 +23,6 @@ var ErrWrongOrderBy = errors.New("found wrong order by")
 
 // по сути, это мок внешней апи, которая отдавал бы данные
 func SearchServer(datapath string) {
-	// yakovlev: add error handling
 	mux := http.NewServeMux()
 	mux.HandleFunc("/",
 		func(w http.ResponseWriter, r *http.Request) {
@@ -31,10 +30,12 @@ func SearchServer(datapath string) {
 		},
 	)
 
-	m := AuthMiddleware(mux)
+	// yakovlev: temprorary
+	// m := AuthMiddleware(mux)
 
 	server := http.Server{
-		Handler: m,
+		// Handler: m,
+		Handler: mux,
 	}
 
 	err := server.ListenAndServe()
@@ -67,18 +68,11 @@ func MainPage(w http.ResponseWriter, r *http.Request, path string) {
 
 	res := data.List
 
-	// yakovlev: try to preinit p, pass it to parseParams (like unmarshal does)
-	p, err := parseParams(r)
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
+	p := parseParams(r)
 
-	res = QueryProcessing(p, res)
+	QueryProcessing(p, &res)
 
-	// this is bad code :0
-	res, err = Sorting(p, res)
-	if err != nil {
+	if err := Sorting(p, &res); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		if errors.Is(err, ErrWrongOrderBy) {
 			io.WriteString(w, `{"Error": "OrderBy invalid"}`)
@@ -91,16 +85,19 @@ func MainPage(w http.ResponseWriter, r *http.Request, path string) {
 		}
 	}
 
-	res = Offset(p, res)
+	if err := Offset(p, &res); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-	res, err = Limit(p, res)
-	if err != nil {
+	if err := Limit(p, &res); err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	jsonResponse, err := json.Marshal(res)
 	if err != nil {
+		// yakovlev: add valid error handling here
 		fmt.Println("err MainPage", err)
 		return
 	}
@@ -109,110 +106,135 @@ func MainPage(w http.ResponseWriter, r *http.Request, path string) {
 
 }
 
-func QueryProcessing(p *params, rows []Row) []Row {
+func QueryProcessing(p *params, rows *[]Row) {
+	s := *rows
 	if p.query == "" {
-		return rows
+		*rows = s
 	} else {
-		res := []Row{}
-		for _, row := range rows {
-			if (strings.Contains(row.Name, p.query)) || (strings.Contains(row.About, p.query)) {
-				res = append(res, row)
+		s := *rows
+
+		tmp := []Row{}
+		for i := 0; i < len(s); i++ {
+			if (strings.Contains(s[i].Name, p.query)) || (strings.Contains(s[i].About, p.query)) {
+				tmp = append(tmp, s[i])
 			}
 		}
-		return res
+		*rows = tmp
+
 	}
 }
 
 // yakovlev: добавить нормальный еррор хенлдинг
 
 // {"Id", "Age", "Name"}
-func Sorting(p *params, rows []Row) ([]Row, error) {
+func Sorting(p *params, rows *[]Row) error {
 	allowed_order_field := []string{"id", "age", "name"}
 	allower_order_by := []string{"-1", "1", "0"}
 
-	// fmt.Println("p.order_field", p.order_field)
+	s := *rows
 
 	if !slices.Contains(allowed_order_field, strings.ToLower(p.order_field)) {
-		return nil, ErrWrongOrderField
+		return ErrWrongOrderField
 	}
 
 	if !slices.Contains(allower_order_by, strings.ToLower(p.order_by)) {
-		return nil, ErrWrongOrderBy
+		return ErrWrongOrderBy
 	}
-	//  1 по возрастанию, 0 как встретилось, -1 по убыванию
-	// OrderBy int
 
 	if p.order_by == "0" {
-		return rows, nil
+		return nil
 	} else {
 		// жесткий говнокод
 		switch strings.ToLower(p.order_field) {
 		case "id":
-			sort.Slice(rows, func(i, j int) bool {
+			sort.Slice(s, func(i, j int) bool {
 				if p.order_by == "-1" {
-					return rows[i].Id < rows[j].Id
+					return s[i].Id < s[j].Id
 				} else {
-					return rows[i].Id > rows[j].Id
+					return s[i].Id > s[j].Id
 				}
 			})
 
 		case "age":
-			sort.Slice(rows, func(i, j int) bool {
+			sort.Slice(s, func(i, j int) bool {
 				if p.order_by == "-1" {
-					return rows[i].Age < rows[j].Age
+					return s[i].Age < s[j].Age
 				} else {
-					return rows[i].Age > rows[j].Age
+					return s[i].Age > s[j].Age
 				}
 			})
 		case "name":
-			sort.Slice(rows, func(i, j int) bool {
+			sort.Slice(s, func(i, j int) bool {
 				if p.order_by == "-1" {
-					return rows[i].Name < rows[j].Name
+					return s[i].Name < s[j].Name
 				} else {
-					return rows[i].Name > rows[j].Name
+					return s[i].Name > s[j].Name
 				}
 			})
 
 		}
 
-		return rows, nil
+		*rows = s
+
+		return nil
 	}
 }
 
-func Offset(p *params, rows []Row) []Row {
+func Offset(p *params, rows *[]Row) error {
+	s := *rows
+
 	if p.offset == "" {
-		return rows
-	} else {
-		offset, _ := strconv.Atoi(p.offset)
-		// add error handling
-
-		if len(rows)-1 > offset {
-			return rows[offset:]
-		} else {
-			return []Row{}
-		}
+		*rows = s
+		return nil
 	}
+
+	offset, _ := strconv.Atoi(p.offset)
+	// yakovlev :add error handling here
+
+	if len(s)-1 > offset {
+		*rows = s[offset:]
+	} else {
+		*rows = []Row{}
+	}
+	return nil
+
 }
 
-func Limit(p *params, rows []Row) ([]Row, error) {
-	if p.limit == "" {
-		return rows, nil
-	} else {
-		limit, _ := strconv.Atoi(p.limit)
+func Limit(p *params, rows *[]Row) error {
+	s := *rows
 
-		if limit > len(rows) {
-			return rows, nil
-		} else if limit < 0 {
-			return []Row{}, errors.New("invalid param")
-		}
-		// add error handling
-		// validate bounds
-		return rows[:limit], nil
+	if p.limit == "" {
+		*rows = s
+		return nil
+
 	}
+
+	limit, _ := strconv.Atoi(p.limit)
+	// yakovlev: add error handling herre
+
+	if limit > len(s) {
+		*rows = s
+		return nil
+	} else if limit < 0 {
+		return errors.New("invalid param")
+	} else {
+		// yakovlev: validate bounds
+		*rows = s[:limit]
+		return nil
+	}
+
 }
 
 func main() {
 	xml_path := "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
 
 	SearchServer(xml_path)
+
+	// 	r := []Row{Row{Id: 1, Name: "testeest"}, Row{Id: 2, Name: "vlad"}, Row{Id: 3, Name: "egor"}, Row{Id: 4, Name: "somte"}}
+	// 	fmt.Println("r", r)
+
+	// 	v := TestFunc(&r)
+	// 	fmt.Println("v", v)
+
+	// 	fmt.Println("r", r)
 }

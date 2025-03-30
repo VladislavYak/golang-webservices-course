@@ -13,7 +13,7 @@ type params struct {
 	limit    string
 }
 
-func parseParams(r *http.Request) (*params, error) {
+func parseParams(r *http.Request) *params {
 	parsedUrl := r.URL.Query()
 
 	orderField := parsedUrl.Get("order_field")
@@ -28,5 +28,5 @@ func parseParams(r *http.Request) (*params, error) {
 		offset:      parsedUrl.Get("offset"),
 		query:       parsedUrl.Get("query"),
 	}
-	return &p, nil
+	return &p
 }
