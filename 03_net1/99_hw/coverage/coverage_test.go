@@ -118,3 +118,19 @@ func TestSearchServerBadRequest(t *testing.T) {
 	}
 
 }
+
+func TestSearchServerBadRequestInvalidOrderBy(t *testing.T) {
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, XML_PATH)
+	})))
+
+	sr := SearchRequest{OrderBy: 100000}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	_, err := sc.FindUsers(sr)
+
+	if err == nil {
+		t.Error("Supposed to get 400 error")
+	}
+
+}

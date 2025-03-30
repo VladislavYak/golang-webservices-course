@@ -16,6 +16,11 @@ import (
 	"strings"
 )
 
+var ErrWrongOrderField = errors.New("found wrong order field")
+var ErrWrongOrderBy = errors.New("found wrong order by")
+
+// yakovlev: ошибки возвращать в джейсонах
+
 // по сути, это мок внешней апи, которая отдавал бы данные
 func SearchServer(datapath string) {
 	// yakovlev: add error handling
@@ -75,8 +80,15 @@ func MainPage(w http.ResponseWriter, r *http.Request, path string) {
 	res, err = Sorting(p, res)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, `{"Error": "OrderField invalid"}`)
-		return
+		if errors.Is(err, ErrWrongOrderBy) {
+			io.WriteString(w, `{"Error": "OrderBy invalid"}`)
+			return
+		} else if errors.Is(err, ErrWrongOrderField) {
+			io.WriteString(w, `{"Error": "OrderField invalid"}`)
+			return
+		} else {
+			io.WriteString(w, `{"Error": "got unknown error"}`)
+		}
 	}
 
 	res = Offset(p, res)
@@ -115,19 +127,27 @@ func QueryProcessing(p *params, rows []Row) []Row {
 
 // {"Id", "Age", "Name"}
 func Sorting(p *params, rows []Row) ([]Row, error) {
-	allowed := []string{"id", "age", "name"}
+	allowed_order_field := []string{"id", "age", "name"}
+	allower_order_by := []string{"-1", "1", "0"}
 
 	// fmt.Println("p.order_field", p.order_field)
 
-	if !slices.Contains(allowed, strings.ToLower(p.order_field)) {
-		return nil, errors.New("error")
+	if !slices.Contains(allowed_order_field, strings.ToLower(p.order_field)) {
+		return nil, ErrWrongOrderField
 	}
-	if p.order_by == "" {
+
+	if !slices.Contains(allower_order_by, strings.ToLower(p.order_by)) {
+		return nil, ErrWrongOrderBy
+	}
+	//  1 по возрастанию, 0 как встретилось, -1 по убыванию
+	// OrderBy int
+
+	if p.order_by == "0" {
 		return rows, nil
 	} else {
 		// жесткий говнокод
-		switch p.order_field {
-		case "Id":
+		switch strings.ToLower(p.order_field) {
+		case "id":
 			sort.Slice(rows, func(i, j int) bool {
 				if p.order_by == "-1" {
 					return rows[i].Id < rows[j].Id
@@ -136,7 +156,7 @@ func Sorting(p *params, rows []Row) ([]Row, error) {
 				}
 			})
 
-		case "Age":
+		case "age":
 			sort.Slice(rows, func(i, j int) bool {
 				if p.order_by == "-1" {
 					return rows[i].Age < rows[j].Age
@@ -144,7 +164,7 @@ func Sorting(p *params, rows []Row) ([]Row, error) {
 					return rows[i].Age > rows[j].Age
 				}
 			})
-		case "Name":
+		case "name":
 			sort.Slice(rows, func(i, j int) bool {
 				if p.order_by == "-1" {
 					return rows[i].Name < rows[j].Name
