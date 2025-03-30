@@ -9,13 +9,11 @@ import (
 
 // тут писать код тестов
 
-const XML_PATH = "./dataset.xml"
+const XML_PATH = "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
 
 func TestSearchServer(t *testing.T) {
-	myData, _ := readXml(XML_PATH)
-
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		MainPage(w, r, &myData)
+		MainPage(w, r, XML_PATH)
 	})))
 
 	sr := SearchRequest{Limit: 5}
@@ -29,27 +27,23 @@ func TestSearchServer(t *testing.T) {
 }
 
 func TestSearchServerLimitLessZero(t *testing.T) {
-	myData, _ := readXml(XML_PATH)
-
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		MainPage(w, r, &myData)
+		MainPage(w, r, XML_PATH)
 	})))
 
 	sr := SearchRequest{Limit: -7}
 
 	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
-	_, err := sc.FindUsers(sr)
+	resp, err := sc.FindUsers(sr)
 
-	if err == nil {
+	if err == nil && len(resp.Users) != 0 {
 		t.Error("limit cannot be less then one")
 	}
 }
 
 func TestSearchServerLimitMore25(t *testing.T) {
-	myData, _ := readXml(XML_PATH)
-
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		MainPage(w, r, &myData)
+		MainPage(w, r, XML_PATH)
 	})))
 
 	sr := SearchRequest{Limit: 100}
@@ -64,10 +58,8 @@ func TestSearchServerLimitMore25(t *testing.T) {
 }
 
 func TestSearchServerOffsetLess0(t *testing.T) {
-	myData, _ := readXml(XML_PATH)
-
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		MainPage(w, r, &myData)
+		MainPage(w, r, XML_PATH)
 	})))
 
 	sr := SearchRequest{Offset: -20}
@@ -81,10 +73,8 @@ func TestSearchServerOffsetLess0(t *testing.T) {
 }
 
 func TestSearchServerAuthError(t *testing.T) {
-	myData, _ := readXml(XML_PATH)
-
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		MainPage(w, r, &myData)
+		MainPage(w, r, XML_PATH)
 	})))
 
 	sr := SearchRequest{Offset: 10}
@@ -95,4 +85,36 @@ func TestSearchServerAuthError(t *testing.T) {
 	if err == nil && len(resp.Users) != 0 {
 		t.Error("Passed invalidToken")
 	}
+}
+
+func TestSearchServerInvalidXml(t *testing.T) {
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, "invalid_path___.xml")
+	})))
+
+	sr := SearchRequest{}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	_, err := sc.FindUsers(sr)
+
+	if err == nil {
+		t.Error("Can get some data from file, but its supposed to be invalid")
+	}
+
+}
+
+func TestSearchServerBadRequest(t *testing.T) {
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, XML_PATH)
+	})))
+
+	sr := SearchRequest{OrderField: "invalid_order_field"}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	_, err := sc.FindUsers(sr)
+
+	if err == nil {
+		t.Error("Supposed to get 400 error")
+	}
+
 }

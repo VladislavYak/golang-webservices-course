@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/xml"
-	"fmt"
 	"os"
 	"time"
 )
@@ -57,13 +56,11 @@ func NewRow(r *Row) *Row {
 func readXml(path string) (Rows, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Println("Cannot read the file", err)
 		return Rows{}, err
 	}
 
 	rows := new(Rows)
 	if err := xml.Unmarshal(data, &rows); err != nil {
-		fmt.Println("Cannot unmarshal", err)
 		return Rows{}, err
 	}
 

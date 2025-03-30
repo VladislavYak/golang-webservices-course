@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"sort"
@@ -18,11 +19,10 @@ import (
 // по сути, это мок внешней апи, которая отдавал бы данные
 func SearchServer(datapath string) {
 	// yakovlev: add error handling
-	myData, _ := readXml(datapath)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/",
 		func(w http.ResponseWriter, r *http.Request) {
-			MainPage(w, r, &myData)
+			MainPage(w, r, datapath)
 		},
 	)
 
@@ -54,13 +54,19 @@ func AuthMiddleware(h http.Handler) http.Handler {
 // order_by=-1&order_field=age&limit=1&offset=0&query=on
 // тут писать SearchServer
 // FindUsers отправляет запрос во внешнюю систему (на самом деле в searchServer, (по сути в Мок))
-func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
+func MainPage(w http.ResponseWriter, r *http.Request, path string) {
+	data, err := readXml(path)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusInternalServerError)
+	}
+
 	res := data.List
 
 	// yakovlev: try to preinit p, pass it to parseParams (like unmarshal does)
 	p, err := parseParams(r)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
 	}
 
 	res = QueryProcessing(p, res)
@@ -68,7 +74,9 @@ func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
 	// this is bad code :0
 	res, err = Sorting(p, res)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, `{"Error": "OrderField invalid"}`)
+		return
 	}
 
 	res = Offset(p, res)
@@ -76,18 +84,13 @@ func MainPage(w http.ResponseWriter, r *http.Request, data *Rows) {
 	res, err = Limit(p, res)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
 	}
 
-	// fmt.Fprintf(w, "%+v\n", res)
-
-	// fmt.Println("res", res)
-
-	// res2 := `{ID: 1, User: "Vlad", Age: 49, About: "xui s gori", Gender: "male"}`
-
 	jsonResponse, err := json.Marshal(res)
-	// fmt.Println("jsonResponse", string(jsonResponse))
 	if err != nil {
 		fmt.Println("err MainPage", err)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResponse)
@@ -108,13 +111,16 @@ func QueryProcessing(p *params, rows []Row) []Row {
 	}
 }
 
+// yakovlev: добавить нормальный еррор хенлдинг
+
 // {"Id", "Age", "Name"}
 func Sorting(p *params, rows []Row) ([]Row, error) {
 	allowed := []string{"id", "age", "name"}
 
+	// fmt.Println("p.order_field", p.order_field)
+
 	if !slices.Contains(allowed, strings.ToLower(p.order_field)) {
-		fmt.Println("i was here")
-		return []Row{}, errors.New("invalid param")
+		return nil, errors.New("error")
 	}
 	if p.order_by == "" {
 		return rows, nil
