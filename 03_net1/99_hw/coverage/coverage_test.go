@@ -142,13 +142,12 @@ func TestSearchServerTimeout(t *testing.T) {
 	})))
 
 	// https://medium.com/@jac_ln/how-to-test-real-request-timeout-in-golang-with-httptest-dbc72ea23d1a
-	http.DefaultTransport.(*http.Transport).ResponseHeaderTimeout = 1 * time.Millisecond
+	http.DefaultTransport.(*http.Transport).ResponseHeaderTimeout = time.Microsecond
 
 	sr := SearchRequest{OrderBy: 1}
 
 	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
 	_, err := sc.FindUsers(sr)
-	fmt.Println("err", err)
 	if err == nil {
 		t.Error("Supposed to get 400 error")
 	}

@@ -22,6 +22,7 @@ var ErrWrongOrderBy = errors.New("found wrong order by")
 // yakovlev: ошибки возвращать в джейсонах
 
 // по сути, это мок внешней апи, которая отдавал бы данные
+// возможно MainPage должгна стать search server
 func SearchServer(datapath string) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/",
@@ -31,11 +32,11 @@ func SearchServer(datapath string) {
 	)
 
 	// yakovlev: temprorary
-	// m := AuthMiddleware(mux)
+	m := AuthMiddleware(mux)
 
 	server := http.Server{
-		// Handler: m,
-		Handler: mux,
+		Handler: m,
+		// Handler: mux,
 	}
 
 	err := server.ListenAndServe()
@@ -63,7 +64,9 @@ func AuthMiddleware(h http.Handler) http.Handler {
 func MainPage(w http.ResponseWriter, r *http.Request, path string) {
 	data, err := readXml(path)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(w, `{"Error": "Internal error"}`)
+		return
 	}
 
 	res := data.List
