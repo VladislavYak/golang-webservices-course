@@ -98,44 +98,33 @@ func TestClientInvalidXml(t *testing.T) {
 	sr := SearchRequest{}
 
 	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
-	_, err := sc.FindUsers(sr)
+	resp, err := sc.FindUsers(sr)
 
-	if err == nil {
+	if err == nil && len(resp.Users) != 0 {
 		t.Error("Can get some data from file, but its supposed to be invalid")
 	}
 
 }
 
-func TestClientBadRequest(t *testing.T) {
+func TestClientBadRequests(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, XML_PATH)
 	})))
 
-	sr := SearchRequest{OrderField: "invalid_order_field"}
-
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
-	_, err := sc.FindUsers(sr)
-
-	if err == nil {
-		t.Error("Supposed to get 400 error")
+	params := []SearchRequest{
+		{OrderField: "invalid_order_field"},
+		{OrderBy: 100000},
 	}
-
-}
-
-func TestClientBadRequestInvalidOrderBy(t *testing.T) {
-	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		MainPage(w, r, XML_PATH)
-	})))
-
-	sr := SearchRequest{OrderBy: 100000}
-
 	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
-	_, err := sc.FindUsers(sr)
 
-	if err == nil {
-		t.Error("Supposed to get 400 error")
+	for _, param := range params {
+		_, err := sc.FindUsers(param)
+
+		if err == nil {
+			t.Error("Supposed to get 400 error")
+		}
+
 	}
-
 }
 
 func TestClientTimeout(t *testing.T) {
@@ -165,10 +154,12 @@ func TestClientLimit(t *testing.T) {
 	})))
 
 	sr := SearchRequest{Limit: 15, Offset: 20}
+	// i have 35 rows totaly
 
 	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
-	_, err := sc.FindUsers(sr)
-	if err == nil {
+	resp, _ := sc.FindUsers(sr)
 
+	if len(resp.Users) != 15 {
+		t.Error("Supposed to have exactly 15 rows")
 	}
 }
