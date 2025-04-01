@@ -10,6 +10,8 @@ import (
 
 // тут писать код тестов
 
+// yakovlev: need to add valid tests
+
 const XML_PATH = "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
 
 func TestSearchServer(t *testing.T) {
@@ -27,7 +29,7 @@ func TestSearchServer(t *testing.T) {
 
 }
 
-func TestSearchServerLimitLessZero(t *testing.T) {
+func TestClientLimitLessZero(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, XML_PATH)
 	})))
@@ -42,7 +44,7 @@ func TestSearchServerLimitLessZero(t *testing.T) {
 	}
 }
 
-func TestSearchServerLimitMore25(t *testing.T) {
+func TestClientLimitMore25(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, XML_PATH)
 	})))
@@ -58,7 +60,7 @@ func TestSearchServerLimitMore25(t *testing.T) {
 
 }
 
-func TestSearchServerOffsetLess0(t *testing.T) {
+func TestClientOffsetLess0(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, XML_PATH)
 	})))
@@ -73,7 +75,7 @@ func TestSearchServerOffsetLess0(t *testing.T) {
 	}
 }
 
-func TestSearchServerAuthError(t *testing.T) {
+func TestClientAuthError(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, XML_PATH)
 	})))
@@ -88,7 +90,7 @@ func TestSearchServerAuthError(t *testing.T) {
 	}
 }
 
-func TestSearchServerInvalidXml(t *testing.T) {
+func TestClientInvalidXml(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, "invalid_path___.xml")
 	})))
@@ -104,7 +106,7 @@ func TestSearchServerInvalidXml(t *testing.T) {
 
 }
 
-func TestSearchServerBadRequest(t *testing.T) {
+func TestClientBadRequest(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, XML_PATH)
 	})))
@@ -120,7 +122,7 @@ func TestSearchServerBadRequest(t *testing.T) {
 
 }
 
-func TestSearchServerBadRequestInvalidOrderBy(t *testing.T) {
+func TestClientBadRequestInvalidOrderBy(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, XML_PATH)
 	})))
@@ -136,10 +138,12 @@ func TestSearchServerBadRequestInvalidOrderBy(t *testing.T) {
 
 }
 
-func TestSearchServerTimeout(t *testing.T) {
+func TestClientTimeout(t *testing.T) {
+
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		MainPage(w, r, XML_PATH)
 	})))
+	defer ts.Close()
 
 	// https://medium.com/@jac_ln/how-to-test-real-request-timeout-in-golang-with-httptest-dbc72ea23d1a
 	http.DefaultTransport.(*http.Transport).ResponseHeaderTimeout = time.Microsecond
@@ -148,8 +152,23 @@ func TestSearchServerTimeout(t *testing.T) {
 
 	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
 	_, err := sc.FindUsers(sr)
+	http.DefaultTransport.(*http.Transport).ResponseHeaderTimeout = 0
 	if err == nil {
 		t.Error("Supposed to get 400 error")
 	}
 
+}
+
+func TestClientLimit(t *testing.T) {
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, XML_PATH)
+	})))
+
+	sr := SearchRequest{Limit: 15, Offset: 20}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	_, err := sc.FindUsers(sr)
+	if err == nil {
+
+	}
 }
