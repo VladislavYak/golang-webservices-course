@@ -9,7 +9,7 @@ import (
 
 // тут писать код тестов
 
-const XML_PATH = "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
+const XML_PATH = "dataset.xml"
 
 func TestClientOffsetLess0(t *testing.T) {
 	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

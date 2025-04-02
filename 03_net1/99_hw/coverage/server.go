@@ -233,7 +233,7 @@ func Limit(p *params, rows *[]Row) error {
 }
 
 // func main() {
-// 	xml_path := "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
+// 	xml_path := "dataset.xml"
 
 // 	SearchServer(xml_path)
 
