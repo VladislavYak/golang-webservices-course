@@ -85,16 +85,19 @@ func MainPage(w http.ResponseWriter, r *http.Request, path string) {
 			return
 		} else {
 			io.WriteString(w, `{"Error": "got unknown error"}`)
+			return
 		}
 	}
 
 	if err := Offset(p, &res); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, `{"Error": "got unknown error"}`)
 		return
 	}
 
 	if err := Limit(p, &res); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, `{"Error": "got unknown error"}`)
 		return
 	}
 
@@ -152,26 +155,26 @@ func Sorting(p *params, rows *[]Row) error {
 		case "id":
 			sort.Slice(s, func(i, j int) bool {
 				if p.order_by == "-1" {
-					return s[i].Id < s[j].Id
-				} else {
 					return s[i].Id > s[j].Id
+				} else {
+					return s[i].Id < s[j].Id
 				}
 			})
 
 		case "age":
 			sort.Slice(s, func(i, j int) bool {
 				if p.order_by == "-1" {
-					return s[i].Age < s[j].Age
-				} else {
 					return s[i].Age > s[j].Age
+				} else {
+					return s[i].Age < s[j].Age
 				}
 			})
 		case "name":
 			sort.Slice(s, func(i, j int) bool {
 				if p.order_by == "-1" {
-					return s[i].Name < s[j].Name
-				} else {
 					return s[i].Name > s[j].Name
+				} else {
+					return s[i].Name < s[j].Name
 				}
 			})
 
@@ -193,8 +196,11 @@ func Offset(p *params, rows *[]Row) error {
 
 	offset, _ := strconv.Atoi(p.offset)
 	// yakovlev :add error handling here
+	if offset < 0 {
+		return errors.New("go invalid offsed (less then 0)")
+	}
 
-	if len(s)-1 > offset {
+	if len(s)-1 >= offset {
 		*rows = s[offset:]
 	} else {
 		*rows = []Row{}
@@ -212,7 +218,11 @@ func Limit(p *params, rows *[]Row) error {
 
 	}
 
-	limit, _ := strconv.Atoi(p.limit)
+	limit, err := strconv.Atoi(p.limit)
+	if err != nil {
+		return err
+	}
+
 	// yakovlev: add error handling herre
 
 	if limit > len(s) {

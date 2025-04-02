@@ -21,12 +21,17 @@ func parseParams(r *http.Request) *params {
 		orderField = "Name"
 	}
 
+	orderBy := parsedUrl.Get("order_by")
+	if orderBy == "" {
+		orderBy = "0"
+	}
 	p := params{
-		order_by:    parsedUrl.Get("order_by"),
+		order_by:    orderBy,
 		order_field: orderField,
 		limit:       parsedUrl.Get("limit"),
 		offset:      parsedUrl.Get("offset"),
 		query:       parsedUrl.Get("query"),
 	}
+
 	return &p
 }
