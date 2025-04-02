@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -36,9 +35,6 @@ func TestHugeOffset(t *testing.T) {
 
 	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 	resp, err := sc.FindUsers(sr)
-
-	fmt.Println("resp", resp)
-	fmt.Println("err", err)
 
 	if err != nil {
 		t.Error("error is not expected for huge offset")
