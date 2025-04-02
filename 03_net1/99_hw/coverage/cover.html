@@ -1,0 +1,611 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>coverage: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">coverage/client.go (92.9%)</option>
+				
+				<option value="file1">coverage/fileRead.go (90.9%)</option>
+				
+				<option value="file2">coverage/paramsParse.go (88.9%)</option>
+				
+				<option value="file3">coverage/server.go (75.2%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "encoding/json"
+        "errors"
+        "fmt"
+        "io"
+        "net"
+        "net/http"
+        "net/url"
+        "strconv"
+        "time"
+)
+
+//nolint:unused,varcheck
+const (
+        orderAsc = iota
+        orderDesc
+)
+
+//nolint:unused,varcheck
+var (
+        errTest = errors.New("testing")
+        client  = &amp;http.Client{Timeout: time.Second}
+)
+
+type User struct {
+        ID     int
+        Name   string
+        Age    int
+        About  string
+        Gender string
+}
+
+type SearchResponse struct {
+        Users    []User
+        NextPage bool
+}
+
+type SearchErrorResponse struct {
+        Error string
+}
+
+const (
+        OrderByAsc  = 1
+        OrderByAsIs = 0
+        OrderByDesc = -1
+
+        ErrorBadOrderField = `OrderField invalid`
+)
+
+type SearchRequest struct {
+        Limit      int
+        Offset     int    // Можно учесть после сортировки
+        Query      string // подстрока в 1 из полей
+        OrderField string
+        //  1 по возрастанию, 0 как встретилось, -1 по убыванию
+        OrderBy int
+}
+
+type SearchClient struct {
+        // токен, по которому происходит авторизация на внешней системе, уходит туда через хедер
+        AccessToken string
+        // урл внешней системы, куда идти
+        URL string
+}
+
+// FindUsers отправляет запрос во внешнюю систему, которая непосредственно ищет пользователей
+func (srv *SearchClient) FindUsers(req SearchRequest) (*SearchResponse, error) <span class="cov8" title="1">{
+
+        searcherParams := url.Values{}
+
+        if req.Limit &lt; 0 </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("limit must be &gt; 0")
+        }</span>
+        <span class="cov8" title="1">if req.Limit &gt; 25 </span><span class="cov8" title="1">{
+                req.Limit = 25
+        }</span>
+        <span class="cov8" title="1">if req.Offset &lt; 0 </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("offset must be &gt; 0")
+        }</span>
+
+        // нужно для получения следующей записи, на основе которой мы скажем - можно показать переключатель следующей страницы или нет
+        <span class="cov8" title="1">req.Limit++
+
+        searcherParams.Add("limit", strconv.Itoa(req.Limit))
+        searcherParams.Add("offset", strconv.Itoa(req.Offset))
+        searcherParams.Add("query", req.Query)
+        searcherParams.Add("order_field", req.OrderField)
+        searcherParams.Add("order_by", strconv.Itoa(req.OrderBy))
+
+        searcherReq, _ := http.NewRequest("GET", srv.URL+"?"+searcherParams.Encode(), nil) //nolint:errcheck
+        searcherReq.Header.Add("AccessToken", srv.AccessToken)
+
+        resp, err := client.Do(searcherReq)
+        if err != nil </span><span class="cov8" title="1">{
+                if err, ok := err.(net.Error); ok &amp;&amp; err.Timeout() </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("timeout for %s", searcherParams.Encode())
+                }</span>
+                <span class="cov0" title="0">return nil, fmt.Errorf("unknown error %s", err)</span>
+        }
+        <span class="cov8" title="1">defer resp.Body.Close()
+        body, _ := io.ReadAll(resp.Body) //nolint:errcheck
+
+        switch resp.StatusCode </span>{
+        case http.StatusUnauthorized:<span class="cov8" title="1">
+                return nil, fmt.Errorf("bad AccessToken")</span>
+        case http.StatusInternalServerError:<span class="cov8" title="1">
+                return nil, fmt.Errorf("SearchServer fatal error")</span>
+        case http.StatusBadRequest:<span class="cov8" title="1">
+                errResp := SearchErrorResponse{}
+                err = json.Unmarshal(body, &amp;errResp)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("cant unpack error json: %s", err)
+                }</span>
+                <span class="cov8" title="1">if errResp.Error == ErrorBadOrderField </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("OrderFeld %s invalid", req.OrderField)
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("unknown bad request error: %s", errResp.Error)</span>
+        }
+
+        <span class="cov8" title="1">data := []User{}
+        err = json.Unmarshal(body, &amp;data)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("cant unpack result json: %s", err)
+        }</span>
+
+        <span class="cov8" title="1">result := SearchResponse{}
+        if len(data) == req.Limit </span><span class="cov8" title="1">{
+                result.NextPage = true
+                result.Users = data[0 : len(data)-1]
+        }</span> else<span class="cov8" title="1"> {
+                result.Users = data[0:]
+        }</span>
+
+        <span class="cov8" title="1">return &amp;result, err</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "encoding/xml"
+        "os"
+        "time"
+)
+
+type Rows struct {
+        Version string `xml:"version,attr"`
+        List    []Row  `xml:"row"`
+}
+
+type customTime struct {
+        time.Time
+}
+
+func (c *customTime) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error <span class="cov8" title="1">{
+        const shortForm = "2006-01-02T15:04:05 -03:00" // yyyymmdd date format 2014-05-10T11:36:09 -03:00
+        var v string
+        d.DecodeElement(&amp;v, &amp;start)
+        parse, err := time.Parse(shortForm, v)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">*c = customTime{parse}
+        return nil</span>
+}
+
+type Row struct {
+        Id            int        `xml:"id"`
+        Guid          string     `xml:"guid"` /* uuid */
+        IsActive      bool       `xml:"isActive"`
+        Balance       string     `xml:"balance"`
+        Picture       string     `xml:"picture"` /* url */
+        Age           int        `xml:"age"`
+        EyeColor      string     `xml:"eyeColor"`
+        FirstName     string     `xml:"first_name"`
+        LastName      string     `xml:"last_name"`
+        Gender        string     `xml:"gender"` /* just 2 values */
+        Company       string     `xml:"company"`
+        Email         string     `xml:"email"`
+        Phone         string     `xml:"phone"`
+        Address       string     `xml:"address"`
+        About         string     `xml:"about"`
+        Registered    customTime `xml:"registered"` /* datetime */
+        FavoriteFruit string     `xml:"favoriteFruit"`
+        Name          string
+}
+
+func NewRow(r *Row) *Row <span class="cov8" title="1">{
+        r.Name = r.FirstName + r.LastName
+        return r
+}</span>
+func readXml(path string) (Rows, error) <span class="cov8" title="1">{
+        data, err := os.ReadFile(path)
+        if err != nil </span><span class="cov8" title="1">{
+                return Rows{}, err
+        }</span>
+
+        <span class="cov8" title="1">rows := new(Rows)
+        if err := xml.Unmarshal(data, &amp;rows); err != nil </span><span class="cov0" title="0">{
+                return Rows{}, err
+        }</span>
+
+        <span class="cov8" title="1">newRows := []Row{}
+        for _, row := range rows.List </span><span class="cov8" title="1">{
+                r := NewRow(&amp;row)
+                newRows = append(newRows, *r)
+        }</span>
+
+        <span class="cov8" title="1">rows.List = newRows
+
+        return *rows, nil</span>
+
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package main
+
+import (
+        "net/http"
+)
+
+type params struct {
+        query       string
+        order_field string
+        order_by    string
+        offset      string
+        limit       string
+}
+
+func parseParams(r *http.Request) *params <span class="cov8" title="1">{
+        parsedUrl := r.URL.Query()
+
+        orderField := parsedUrl.Get("order_field")
+        if orderField == "" </span><span class="cov8" title="1">{
+                orderField = "Name"
+        }</span>
+
+        <span class="cov8" title="1">orderBy := parsedUrl.Get("order_by")
+        if orderBy == "" </span><span class="cov0" title="0">{
+                orderBy = "0"
+        }</span>
+        <span class="cov8" title="1">p := params{
+                order_by:    orderBy,
+                order_field: orderField,
+                limit:       parsedUrl.Get("limit"),
+                offset:      parsedUrl.Get("offset"),
+                query:       parsedUrl.Get("query"),
+        }
+
+        return &amp;p</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package main
+
+// yakovlev useful readings
+// https://gowebexamples.com/forms/
+// https://gowebexamples.com/sessions/
+
+import (
+        "encoding/json"
+        "errors"
+        "fmt"
+        "io"
+        "net/http"
+        "slices"
+        "sort"
+        "strconv"
+        "strings"
+)
+
+var ErrWrongOrderField = errors.New("found wrong order field")
+var ErrWrongOrderBy = errors.New("found wrong order by")
+var VALID_TOKEN = "mytoken"
+
+// по сути, это мок внешней апи, которая отдавал бы данные
+// возможно MainPage должгна стать search server
+func SearchServer(datapath string) <span class="cov0" title="0">{
+        mux := http.NewServeMux()
+        mux.HandleFunc("/",
+                func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                        MainPage(w, r, datapath)
+                }</span>,
+        )
+
+        <span class="cov0" title="0">m := AuthMiddleware(mux)
+
+        server := http.Server{
+                Handler: m,
+                // Handler: mux,
+        }
+
+        err := server.ListenAndServe()
+        fmt.Printf("%v", err)</span>
+}
+
+func AuthMiddleware(h http.Handler) http.Handler <span class="cov8" title="1">{
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                token := r.Header.Get("AccessToken")
+
+                if token != VALID_TOKEN </span><span class="cov8" title="1">{
+                        http.Error(w, "StatusUnauthorized", http.StatusUnauthorized)
+                }</span> else<span class="cov8" title="1"> {
+                        h.ServeHTTP(w, r)
+                }</span>
+
+        })
+}
+
+// order_by=-1&amp;order_field=age&amp;limit=1&amp;offset=0&amp;query=on
+// тут писать SearchServer
+// FindUsers отправляет запрос во внешнюю систему (на самом деле в searchServer, (по сути в Мок))
+func MainPage(w http.ResponseWriter, r *http.Request, path string) <span class="cov8" title="1">{
+        data, err := readXml(path)
+        if err != nil </span><span class="cov8" title="1">{
+                w.WriteHeader(http.StatusInternalServerError)
+                io.WriteString(w, `{"Error": "Internal error"}`)
+                return
+        }</span>
+
+        <span class="cov8" title="1">res := data.List
+
+        p := parseParams(r)
+
+        QueryProcessing(p, &amp;res)
+
+        if err := Sorting(p, &amp;res); err != nil </span><span class="cov8" title="1">{
+                w.WriteHeader(http.StatusBadRequest)
+                if errors.Is(err, ErrWrongOrderBy) </span><span class="cov8" title="1">{
+                        io.WriteString(w, `{"Error": "OrderBy invalid"}`)
+                        return
+                }</span> else<span class="cov8" title="1"> if errors.Is(err, ErrWrongOrderField) </span><span class="cov8" title="1">{
+                        io.WriteString(w, `{"Error": "OrderField invalid"}`)
+                        return
+                }</span> else<span class="cov0" title="0"> {
+                        io.WriteString(w, `{"Error": "got unknown error"}`)
+                        return
+                }</span>
+        }
+
+        <span class="cov8" title="1">if err := Offset(p, &amp;res); err != nil </span><span class="cov0" title="0">{
+                w.WriteHeader(http.StatusBadRequest)
+                io.WriteString(w, `{"Error": "got unknown error"}`)
+                return
+        }</span>
+
+        <span class="cov8" title="1">if err := Limit(p, &amp;res); err != nil </span><span class="cov0" title="0">{
+                w.WriteHeader(http.StatusBadRequest)
+                io.WriteString(w, `{"Error": "got unknown error"}`)
+                return
+        }</span>
+
+        <span class="cov8" title="1">jsonResponse, err := json.Marshal(res)
+        if err != nil </span><span class="cov0" title="0">{
+                w.WriteHeader(http.StatusBadRequest)
+                io.WriteString(w, `{"Error": "got unknown error"}`)
+                return
+        }</span>
+        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        w.Write(jsonResponse)</span>
+
+}
+
+func QueryProcessing(p *params, rows *[]Row) <span class="cov8" title="1">{
+        s := *rows
+        if p.query == "" </span><span class="cov8" title="1">{
+                *rows = s
+        }</span> else<span class="cov8" title="1"> {
+                s := *rows
+
+                tmp := []Row{}
+                for i := 0; i &lt; len(s); i++ </span><span class="cov8" title="1">{
+                        if (strings.Contains(s[i].Name, p.query)) || (strings.Contains(s[i].About, p.query)) </span><span class="cov8" title="1">{
+                                tmp = append(tmp, s[i])
+                        }</span>
+                }
+                <span class="cov8" title="1">*rows = tmp</span>
+
+        }
+}
+
+// {"Id", "Age", "Name"}
+func Sorting(p *params, rows *[]Row) error <span class="cov8" title="1">{
+        allowed_order_field := []string{"id", "age", "name"}
+        allower_order_by := []string{"-1", "1", "0"}
+
+        s := *rows
+
+        if !slices.Contains(allowed_order_field, strings.ToLower(p.order_field)) </span><span class="cov8" title="1">{
+                return ErrWrongOrderField
+        }</span>
+
+        <span class="cov8" title="1">if !slices.Contains(allower_order_by, strings.ToLower(p.order_by)) </span><span class="cov8" title="1">{
+                return ErrWrongOrderBy
+        }</span>
+
+        <span class="cov8" title="1">if p.order_by == "0" </span><span class="cov8" title="1">{
+                return nil
+        }</span> else<span class="cov8" title="1"> {
+                switch strings.ToLower(p.order_field) </span>{
+                case "id":<span class="cov8" title="1">
+                        sort.Slice(s, func(i, j int) bool </span><span class="cov8" title="1">{
+                                if p.order_by == "-1" </span><span class="cov8" title="1">{
+                                        return s[i].Id &gt; s[j].Id
+                                }</span> else<span class="cov8" title="1"> {
+                                        return s[i].Id &lt; s[j].Id
+                                }</span>
+                        })
+
+                case "age":<span class="cov8" title="1">
+                        sort.Slice(s, func(i, j int) bool </span><span class="cov8" title="1">{
+                                if p.order_by == "-1" </span><span class="cov8" title="1">{
+                                        return s[i].Age &gt; s[j].Age
+                                }</span> else<span class="cov8" title="1"> {
+                                        return s[i].Age &lt; s[j].Age
+                                }</span>
+                        })
+                case "name":<span class="cov8" title="1">
+                        sort.Slice(s, func(i, j int) bool </span><span class="cov8" title="1">{
+                                if p.order_by == "-1" </span><span class="cov8" title="1">{
+                                        return s[i].Name &gt; s[j].Name
+                                }</span> else<span class="cov8" title="1"> {
+                                        return s[i].Name &lt; s[j].Name
+                                }</span>
+                        })
+
+                }
+
+                <span class="cov8" title="1">*rows = s
+
+                return nil</span>
+        }
+}
+
+func Offset(p *params, rows *[]Row) error <span class="cov8" title="1">{
+        s := *rows
+
+        if p.offset == "" </span><span class="cov0" title="0">{
+                *rows = s
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">offset, err := strconv.Atoi(p.offset)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if offset &lt; 0 </span><span class="cov0" title="0">{
+                return errors.New("got invalid offset (less then 0)")
+        }</span>
+
+        <span class="cov8" title="1">if len(s)-1 &gt;= offset </span><span class="cov8" title="1">{
+                *rows = s[offset:]
+        }</span> else<span class="cov8" title="1"> {
+                *rows = []Row{}
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+
+}
+
+func Limit(p *params, rows *[]Row) error <span class="cov8" title="1">{
+        s := *rows
+
+        if p.limit == "" </span><span class="cov0" title="0">{
+                *rows = s
+                return nil
+
+        }</span>
+
+        <span class="cov8" title="1">limit, err := strconv.Atoi(p.limit)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">if limit &gt; len(s) </span><span class="cov8" title="1">{
+                *rows = s
+                return nil
+        }</span> else<span class="cov8" title="1"> if limit &lt; 0 </span><span class="cov0" title="0">{
+                return errors.New("invalid param")
+        }</span> else<span class="cov8" title="1"> {
+                // yakovlev: validate bounds
+                *rows = s[:limit]
+                return nil
+        }</span>
+
+}
+
+// func main() {
+//         xml_path := "dataset.xml"
+
+//         SearchServer(xml_path)
+
+//         //         r := []Row{Row{Id: 1, Name: "testeest"}, Row{Id: 2, Name: "vlad"}, Row{Id: 3, Name: "egor"}, Row{Id: 4, Name: "somte"}}
+//         //         fmt.Println("r", r)
+
+//         //         v := TestFunc(&amp;r)
+//         //         fmt.Println("v", v)
+
+//         //         fmt.Println("r", r)
+// }
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
