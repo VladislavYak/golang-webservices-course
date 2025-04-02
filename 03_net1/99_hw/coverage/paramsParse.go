@@ -7,10 +7,9 @@ import (
 type params struct {
 	query       string
 	order_field string
-	// yakovlev: whether it string or int
-	order_by string
-	offset   string
-	limit    string
+	order_by    string
+	offset      string
+	limit       string
 }
 
 func parseParams(r *http.Request) *params {
