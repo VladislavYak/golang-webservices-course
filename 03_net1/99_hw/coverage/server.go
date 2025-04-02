@@ -103,8 +103,8 @@ func MainPage(w http.ResponseWriter, r *http.Request, path string) {
 
 	jsonResponse, err := json.Marshal(res)
 	if err != nil {
-		// yakovlev: add valid error handling here
-		fmt.Println("err MainPage", err)
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, `{"Error": "got unknown error"}`)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -130,8 +130,6 @@ func QueryProcessing(p *params, rows *[]Row) {
 	}
 }
 
-// yakovlev: добавить нормальный еррор хенлдинг
-
 // {"Id", "Age", "Name"}
 func Sorting(p *params, rows *[]Row) error {
 	allowed_order_field := []string{"id", "age", "name"}
@@ -150,7 +148,6 @@ func Sorting(p *params, rows *[]Row) error {
 	if p.order_by == "0" {
 		return nil
 	} else {
-		// жесткий говнокод
 		switch strings.ToLower(p.order_field) {
 		case "id":
 			sort.Slice(s, func(i, j int) bool {
@@ -194,10 +191,12 @@ func Offset(p *params, rows *[]Row) error {
 		return nil
 	}
 
-	offset, _ := strconv.Atoi(p.offset)
-	// yakovlev :add error handling here
+	offset, err := strconv.Atoi(p.offset)
+	if err != nil {
+		return err
+	}
 	if offset < 0 {
-		return errors.New("go invalid offsed (less then 0)")
+		return errors.New("got invalid offset (less then 0)")
 	}
 
 	if len(s)-1 >= offset {
@@ -222,8 +221,6 @@ func Limit(p *params, rows *[]Row) error {
 	if err != nil {
 		return err
 	}
-
-	// yakovlev: add error handling herre
 
 	if limit > len(s) {
 		*rows = s
