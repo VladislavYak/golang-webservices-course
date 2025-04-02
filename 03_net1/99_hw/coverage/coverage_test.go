@@ -9,8 +9,6 @@ import (
 
 // тут писать код тестов
 
-// yakovlev: need to add valid tests
-
 const XML_PATH = "/Users/vi/personal_proj/golang_web_services_2024-04-26/03_net1/99_hw/coverage/dataset.xml"
 
 func TestClientOffsetLess0(t *testing.T) {

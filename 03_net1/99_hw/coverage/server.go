@@ -19,8 +19,6 @@ import (
 var ErrWrongOrderField = errors.New("found wrong order field")
 var ErrWrongOrderBy = errors.New("found wrong order by")
 
-// yakovlev: ошибки возвращать в джейсонах
-
 // по сути, это мок внешней апи, которая отдавал бы данные
 // возможно MainPage должгна стать search server
 func SearchServer(datapath string) {
@@ -31,7 +29,6 @@ func SearchServer(datapath string) {
 		},
 	)
 
-	// yakovlev: temprorary
 	m := AuthMiddleware(mux)
 
 	server := http.Server{
