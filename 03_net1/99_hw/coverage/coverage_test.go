@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,11 +19,33 @@ func TestClientOffsetLess0(t *testing.T) {
 
 	sr := SearchRequest{Offset: -20}
 
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 	resp, err := sc.FindUsers(sr)
 
 	if err == nil && len(resp.Users) != 0 {
 		t.Error("Offset cannot be less then 0")
+	}
+}
+
+func TestHugeOffset(t *testing.T) {
+	ts := httptest.NewServer(AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		MainPage(w, r, XML_PATH)
+	})))
+
+	sr := SearchRequest{Offset: 100000}
+
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
+	resp, err := sc.FindUsers(sr)
+
+	fmt.Println("resp", resp)
+	fmt.Println("err", err)
+
+	if err != nil {
+		t.Error("error is not expected for huge offset")
+	}
+
+	if len(resp.Users) > 0 {
+		t.Error("expected to get 0 values")
 	}
 }
 
@@ -48,7 +71,7 @@ func TestClientInvalidXml(t *testing.T) {
 
 	sr := SearchRequest{}
 
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 	resp, err := sc.FindUsers(sr)
 
 	if err == nil && len(resp.Users) != 0 {
@@ -66,7 +89,7 @@ func TestClientBadRequests(t *testing.T) {
 		{OrderField: "invalid_order_field"},
 		{OrderBy: 100000},
 	}
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 
 	for _, param := range params {
 		_, err := sc.FindUsers(param)
@@ -90,7 +113,7 @@ func TestClientTimeout(t *testing.T) {
 
 	sr := SearchRequest{OrderBy: 1}
 
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 	_, err := sc.FindUsers(sr)
 	http.DefaultTransport.(*http.Transport).ResponseHeaderTimeout = 0
 	if err == nil {
@@ -107,7 +130,7 @@ func TestClientLimitOffset(t *testing.T) {
 	sr := SearchRequest{Limit: 15, Offset: 20}
 	// i have 35 rows totaly
 
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 	resp, _ := sc.FindUsers(sr)
 
 	if len(resp.Users) != 15 {
@@ -120,7 +143,7 @@ func TestLimit(t *testing.T) {
 		MainPage(w, r, XML_PATH)
 	})))
 
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 
 	testCases := []struct {
 		CaseName string
@@ -185,7 +208,7 @@ func TestQuery(t *testing.T) {
 
 	sr := SearchRequest{Query: "Twila", Limit: 10}
 
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 	resp, err := sc.FindUsers(sr)
 
 	if err == nil && len(resp.Users) != 1 && resp.Users[0].ID != 33 {
@@ -198,7 +221,7 @@ func TestSorting(t *testing.T) {
 		MainPage(w, r, XML_PATH)
 	})))
 
-	sc := SearchClient{URL: ts.URL, AccessToken: "mytoken"}
+	sc := SearchClient{URL: ts.URL, AccessToken: VALID_TOKEN}
 
 	testCases := []struct {
 		CaseName string

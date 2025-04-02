@@ -18,6 +18,7 @@ import (
 
 var ErrWrongOrderField = errors.New("found wrong order field")
 var ErrWrongOrderBy = errors.New("found wrong order by")
+var VALID_TOKEN = "mytoken"
 
 // по сути, это мок внешней апи, которая отдавал бы данные
 // возможно MainPage должгна стать search server
@@ -41,8 +42,6 @@ func SearchServer(datapath string) {
 }
 
 func AuthMiddleware(h http.Handler) http.Handler {
-	VALID_TOKEN := "mytoken"
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("AccessToken")
 
