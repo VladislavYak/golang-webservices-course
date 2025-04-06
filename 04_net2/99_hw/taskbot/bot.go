@@ -4,6 +4,10 @@ package main
 
 import (
 	"context"
+	"net/http"
+
+	handlers "github.com/VladislavYak/taskbot/handlers"
+	"github.com/gorilla/mux"
 )
 
 var (
@@ -15,7 +19,15 @@ var (
 )
 
 func startTaskBot(ctx context.Context) error {
-	// сюда пишите ваш код
+	r := mux.NewRouter()
+
+	r.HandleFunc("/tasks", handlers.Tasks).Methods("GET")
+	r.HandleFunc("/new/{name}", handlers.New).Methods("POST")
+	r.HandleFunc("/my", handlers.My).Methods("GET")
+	r.HandleFunc("/owner", handlers.Owner).Methods("GET")
+
+	http.ListenAndServe(":8080", r)
+
 	return nil
 }
 
