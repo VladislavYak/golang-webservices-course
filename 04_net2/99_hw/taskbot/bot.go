@@ -4,29 +4,31 @@ package main
 
 import (
 	"context"
-	"net/http"
+	"sync"
 
-	handlers "github.com/VladislavYak/taskbot/handlers"
-	"github.com/gorilla/mux"
+	"github.com/VladislavYak/taskbot/internal/client/telegram"
+	router "github.com/VladislavYak/taskbot/internal/transport/http"
 )
 
 var (
 	// @BotFather в телеграме даст вам это
-	BotToken = "XXX"
+	BotToken = "7930706080:AAGBqDBccmPjEGWl7-fIu4OIiJDPx7wYE-A"
 
 	// урл выдаст вам игрок или хероку
-	WebhookURL = "https://525f2cb5.ngrok.io"
+	WebhookURL = "https://80c81c03134b28.lhr.life"
 )
 
 func startTaskBot(ctx context.Context) error {
-	r := mux.NewRouter()
 
-	r.HandleFunc("/tasks", handlers.Tasks).Methods("GET")
-	r.HandleFunc("/new/{name}", handlers.New).Methods("POST")
-	r.HandleFunc("/my", handlers.My).Methods("GET")
-	r.HandleFunc("/owner", handlers.Owner).Methods("GET")
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	// tg := telegram.Telegram{WebhookURL: WebhookURL, BotToken: BotToken, Url: "localhost:8081"}
+	tg := telegram.NewTelegram(BotToken, WebhookURL)
 
-	http.ListenAndServe(":8080", r)
+	go router.Handlers(wg)
+	go tg.Router(wg)
+
+	wg.Wait()
 
 	return nil
 }
@@ -36,4 +38,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// time.Sleep(time.Second * 100)
 }
