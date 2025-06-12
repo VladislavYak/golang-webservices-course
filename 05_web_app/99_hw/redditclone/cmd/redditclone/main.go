@@ -1,11 +1,12 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/VladislavYak/redditclone/pkg/handlers"
 	"github.com/VladislavYak/redditclone/pkg/post"
+	"github.com/VladislavYak/redditclone/pkg/user"
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 const (
@@ -14,28 +15,42 @@ const (
 
 func main() {
 	PostRepo := post.NewPostRepo()
+	UserRepo := user.NewUserRepo()
 
 	postHandler := handlers.PostHandler{Repo: *PostRepo}
+	registerHandler := handlers.RegisterHandler{UserRepo: *UserRepo}
+	loginHandler := handlers.LoginHandler{UserRepo: *UserRepo}
 
 	e := echo.New()
+
+	e.Pre(middleware.RemoveTrailingSlash())
 	e.Logger.Debug()
 
 	g := e.Group(api)
 
+	// Отдаем статические файлы
 	e.Static("/static", "static")
+	// e.Static("/", "static/html") // Отдаем HTML файлы по корневому маршруту
+	e.File("/", "static/html/index.html")
 
-	e.GET("/", func(c echo.Context) error {
-		c.Redirect(http.StatusSeeOther, "/static/html/index.html")
-		return nil
-	})
-
+	g.POST("/register", registerHandler.Register)
+	g.POST("/login", loginHandler.Login)
 	g.GET("/posts", postHandler.GetPosts)
 	g.GET("/posts/:CategoryName", postHandler.GetPostsByCategoryName)
+	g.GET("/post/:id", postHandler.GetPostByID)
 
-	g.POST("/posts", postHandler.PostPost)
-	g.DELETE("/post/:id", postHandler.DeletePost)
+	{
+		config := echojwt.Config{
+			// NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			// 	return new(jwt.RegisteredClaims)
+			// },
+			SigningKey: []byte("secret"),
+		}
+		g.Use(echojwt.WithConfig(config))
 
-	g.POST("/register", handlers.Register)
+		g.POST("/posts", postHandler.PostPost)
+		g.DELETE("/post/:id", postHandler.DeletePost)
+	}
 
 	e.Logger.Fatal(e.Start(":1323"))
 
