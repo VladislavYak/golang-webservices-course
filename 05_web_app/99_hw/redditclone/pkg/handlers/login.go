@@ -24,14 +24,15 @@ func (lh *LoginHandler) Login(c echo.Context) error {
 	if err := c.Bind(form); err != nil {
 		return err
 	}
+	fmt.Println("before UserRepo.GetUser")
 
 	user, err := lh.UserRepo.GetUser(&user.User{Username: form.Username, Password: form.Password})
 	if err != nil {
-		echo.NewHTTPError(http.StatusUnauthorized, err)
+		return echo.NewHTTPError(http.StatusUnauthorized, err)
 	}
 
 	if user.Password != form.Password {
-		echo.NewHTTPError(http.StatusUnauthorized, err)
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid password")
 	}
 
 	// if err := rh.UserRepo.AddUser(&user.User{Username: form.Username, Password: form.Password}); err != nil {
