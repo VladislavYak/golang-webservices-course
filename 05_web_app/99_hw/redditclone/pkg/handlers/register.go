@@ -18,6 +18,14 @@ type RegisterHandler struct {
 	UserRepo user.UserRepo
 }
 
+// jwtCustomClaims are custom claims extending default ones.
+// See https://github.com/golang-jwt/jwt for more examples
+type JwtCustomClaims struct {
+	Name string `json:"name"`
+	Id   string `json:"id"`
+	jwt.RegisteredClaims
+}
+
 func (rh *RegisterHandler) Register(c echo.Context) error {
 
 	form := &RegisterForm{}
@@ -26,13 +34,22 @@ func (rh *RegisterHandler) Register(c echo.Context) error {
 		return err
 	}
 
-	if err := rh.UserRepo.AddUser(&user.User{Username: form.Username, Password: form.Password}); err != nil {
+	id, err := rh.UserRepo.AddUser(&user.User{Username: form.Username, Password: form.Password})
+	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	// Set custom claims
-	claims := &jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
+	// claims := &jwt.RegisteredClaims{
+	// 	ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
+	// }
+	// Set custom claims
+	claims := &JwtCustomClaims{
+		form.Username,
+		id,
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
+		},
 	}
 
 	// Create token with claims

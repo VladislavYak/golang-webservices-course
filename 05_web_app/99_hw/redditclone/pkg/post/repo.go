@@ -59,3 +59,15 @@ func (pp *PostRepo) AddPost(Post *Post) (*Post, error) {
 	fmt.Println("my Posts", pp.Data)
 	return Post, nil
 }
+
+func (pp PostRepo) AddComment(Id string, comment *Comment) (*Post, error) {
+
+	for _, Post := range pp.Data {
+		if Post.Id == Id {
+			Post.Comments = append(Post.Comments, *comment)
+			return Post, nil
+		}
+	}
+
+	return nil, errors.New("post not found")
+}
