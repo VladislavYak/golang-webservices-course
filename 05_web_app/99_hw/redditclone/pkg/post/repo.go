@@ -51,7 +51,8 @@ func (pp *PostRepo) AddPost(Post *Post) (*Post, error) {
 	pp.Mutex.Lock()
 	defer pp.Mutex.Unlock()
 
-	Post.Id = strconv.Itoa(pp.lastID)
+	Post = Post.WithId(strconv.Itoa(pp.lastID))
+
 	pp.lastID++
 
 	pp.Data = append(pp.Data, Post)

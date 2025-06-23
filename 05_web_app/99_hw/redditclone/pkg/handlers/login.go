@@ -20,18 +20,17 @@ type LoginHandler struct {
 }
 
 func (lh *LoginHandler) Login(c echo.Context) error {
-
 	form := &LoginForm{}
 
 	if err := c.Bind(form); err != nil {
 		return err
 	}
-	user, err := lh.UserRepo.GetUser(&user.User{Username: form.Username, Password: form.Password})
+	user, err := lh.UserRepo.GetUser(user.NewUser(form.Username).WithPassword(form.Password))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, err)
 	}
 
-	if user.Password != form.Password {
+	if user.GetPassword() != form.Password {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid password")
 	}
 

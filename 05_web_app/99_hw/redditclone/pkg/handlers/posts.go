@@ -68,7 +68,8 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 		c.String(http.StatusBadRequest, err.Error())
 	}
 
-	Post := &post.Post{Category: pp.Category, Type: pp.Type, Url: pp.Url, Text: pp.Text, Title: pp.Title, Author: user.User{UserID: claims.ID, Username: claims.Name}}
+	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, user.User{UserID: claims.ID, Username: claims.Name})
+
 	postReturned, err := ph.Repo.AddPost(Post)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot add post")

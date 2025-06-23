@@ -33,3 +33,19 @@ type Post struct {
 	// user should be deleted by password
 	Author user.User
 }
+
+func NewPost(category string, postType string, url string, text string, title string, author user.User) *Post {
+	return &Post{
+		Category: category,
+		Type:     postType,
+		Url:      url,
+		Text:     text,
+		Title:    title,
+		Author:   author,
+	}
+}
+
+func (p *Post) WithId(id string) *Post {
+	p.Id = id
+	return p
+}

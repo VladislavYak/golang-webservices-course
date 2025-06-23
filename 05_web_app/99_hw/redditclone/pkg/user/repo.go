@@ -31,7 +31,9 @@ func (ur *UserRepo) AddUser(user *User) (string, error) {
 	}
 
 	idStr := strconv.Itoa(ur.lastID)
-	user.UserID = idStr
+
+	user = user.WithID(idStr)
+
 	ur.lastID++
 
 	*ur.Users = append(*ur.Users, *user)

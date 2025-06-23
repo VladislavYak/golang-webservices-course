@@ -34,7 +34,7 @@ func (rh *RegisterHandler) Register(c echo.Context) error {
 		return err
 	}
 
-	id, err := rh.UserRepo.AddUser(&user.User{Username: form.Username, Password: form.Password})
+	id, err := rh.UserRepo.AddUser(user.NewUser(form.Username).WithPassword(form.Password))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
