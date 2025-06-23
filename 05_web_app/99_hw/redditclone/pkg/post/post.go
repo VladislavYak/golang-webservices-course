@@ -1,6 +1,10 @@
 package post
 
-import "github.com/VladislavYak/redditclone/pkg/user"
+import (
+	"time"
+
+	"github.com/VladislavYak/redditclone/pkg/user"
+)
 
 type Vote struct {
 	User int `json:"id"`
@@ -24,14 +28,13 @@ type Post struct {
 	Title            string    `json:"title"`
 	Votes            []Vote    `json:"votes"`
 	Comments         []Comment `json:"comments"`
-	Created          string    `json:"created"`
+	Created          time.Time `json:"created"`
 	UpvotePercentage int       `json:"upvotePercentage"`
 
 	Score int `json:"score"`
 	Views int `json:"views"`
 
-	// user should be deleted by password
-	Author user.User
+	Author user.User `json:"author"`
 }
 
 func NewPost(category string, postType string, url string, text string, title string, author user.User) *Post {
@@ -42,6 +45,9 @@ func NewPost(category string, postType string, url string, text string, title st
 		Text:     text,
 		Title:    title,
 		Author:   author,
+		Created:  time.Now().UTC(),
+		Score:    0,
+		Views:    0,
 	}
 }
 
