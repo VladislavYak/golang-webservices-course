@@ -113,14 +113,10 @@ func (ph *PostHandler) AddComment(c echo.Context) error {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	Author := user.User{UserID: claims.ID, Username: claims.Name}
-	Comment := post.Comment{Body: body.Comment, Author: Author}
-	// idInt, err := strconv.Atoi(id)
-	// if err != nil {
-	// 	return echo.NewHTTPError(http.StatusBadRequest, "got invalid id")
-	// }
+	// Comment := post.Comment{Body: body.Comment, Author: *user.NewUser(claims.Name).WithID(claims.Id)}
+	Comment := post.NewComment(*user.NewUser(claims.Name).WithID(claims.Id), body.Comment)
 
-	returnedPost, err := ph.Repo.AddComment(id, &Comment)
+	returnedPost, err := ph.Repo.AddComment(id, Comment)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}

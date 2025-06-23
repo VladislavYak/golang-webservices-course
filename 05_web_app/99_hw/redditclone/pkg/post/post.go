@@ -12,10 +12,19 @@ type Vote struct {
 }
 
 type Comment struct {
-	Created string    `json:"created"`
+	Created time.Time `json:"created"`
 	Author  user.User `json:"author"`
 	Body    string    `json:"body"`
 	Id      string    `json:"id"`
+}
+
+func NewComment(Author user.User, Body string) *Comment {
+	return &Comment{Created: time.Now().UTC(), Author: Author, Body: Body}
+}
+
+func (c *Comment) WithId(id string) *Comment {
+	c.Id = id
+	return c
 }
 
 // need adding more fields
