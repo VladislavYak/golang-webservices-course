@@ -57,6 +57,7 @@ func NewPost(category string, postType string, url string, text string, title st
 		Created:  time.Now().UTC(),
 		Score:    0,
 		Views:    0,
+		Comments: []Comment{},
 	}
 }
 

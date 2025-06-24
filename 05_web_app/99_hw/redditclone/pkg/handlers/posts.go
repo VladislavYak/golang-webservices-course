@@ -45,10 +45,9 @@ func (ph *PostHandler) GetPostsByCategoryName(c echo.Context) error {
 func (ph *PostHandler) GetPostByID(c echo.Context) error {
 	id := c.Param("id")
 
-	// idConv, err := strconv.Atoi(id)
-	// if err != nil {
-	// 	return errors.New("got invalid id")
-	// }
+	if err := ph.Repo.UpdatePostViews(id); err != nil {
+		return err
+	}
 
 	post, err := ph.Repo.GetPostByID(id)
 	if err != nil {
@@ -59,7 +58,21 @@ func (ph *PostHandler) GetPostByID(c echo.Context) error {
 
 }
 
+func (ph *PostHandler) GetPostByUsername(c echo.Context) error {
+	username := c.Param("username")
+
+	post, err := ph.Repo.GetPostsByUsername(username)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, post)
+
+}
+
 func (ph *PostHandler) PostPost(c echo.Context) error {
+	// yakovlev: корнер кейс, когда текст - есть только текст, но нет урл
+	// когда урл, нет текст
 	us := c.Get("user").(*jwt.Token)
 	claims := us.Claims.(*JwtCustomClaims)
 
@@ -113,7 +126,6 @@ func (ph *PostHandler) AddComment(c echo.Context) error {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	// Comment := post.Comment{Body: body.Comment, Author: *user.NewUser(claims.Name).WithID(claims.Id)}
 	Comment := post.NewComment(*user.NewUser(claims.Name).WithID(claims.Id), body.Comment)
 
 	returnedPost, err := ph.Repo.AddComment(id, Comment)
@@ -125,5 +137,26 @@ func (ph *PostHandler) AddComment(c echo.Context) error {
 }
 
 func (ph *PostHandler) DeleteComment(c echo.Context) error {
-	return nil
+	id := c.Param("id")
+	commentId := c.Param("commentId")
+
+	ph.Repo.Mutex.Lock()
+	defer ph.Repo.Mutex.Unlock()
+
+	for i, post := range ph.Repo.Data {
+		if post.Id == id {
+
+			for j, comment := range post.Comments {
+				if comment.Id == commentId {
+					post.Comments = append(post.Comments[:j], post.Comments[j+1:]...)
+					ph.Repo.Data[i] = post
+					return c.JSON(http.StatusOK, post)
+				}
+
+			}
+
+		}
+
+	}
+	return echo.NewHTTPError(http.StatusNotFound, "this id doesnot exist")
 }
