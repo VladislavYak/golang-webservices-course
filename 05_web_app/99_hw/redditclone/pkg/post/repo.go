@@ -101,3 +101,26 @@ func (pp *PostRepo) AddComment(Id string, comment *Comment) (*Post, error) {
 
 	return nil, errors.New("post not found")
 }
+
+// yakovlev move DeleteComment here
+func (pp *PostRepo) DeleteComment(id string, commentId string) (*Post, error) {
+
+	pp.Mutex.Lock()
+	defer pp.Mutex.Unlock()
+	for i, post := range pp.Data {
+		if post.Id == id {
+
+			for j, comment := range post.Comments {
+				if comment.Id == commentId {
+					post.Comments = append(post.Comments[:j], post.Comments[j+1:]...)
+					pp.Data[i] = post
+					return post, nil
+				}
+
+			}
+
+		}
+
+	}
+	return nil, errors.New("this id doesnot exist")
+}

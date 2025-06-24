@@ -140,23 +140,9 @@ func (ph *PostHandler) DeleteComment(c echo.Context) error {
 	id := c.Param("id")
 	commentId := c.Param("commentId")
 
-	ph.Repo.Mutex.Lock()
-	defer ph.Repo.Mutex.Unlock()
-
-	for i, post := range ph.Repo.Data {
-		if post.Id == id {
-
-			for j, comment := range post.Comments {
-				if comment.Id == commentId {
-					post.Comments = append(post.Comments[:j], post.Comments[j+1:]...)
-					ph.Repo.Data[i] = post
-					return c.JSON(http.StatusOK, post)
-				}
-
-			}
-
-		}
-
+	returnedPost, err := ph.Repo.DeleteComment(id, commentId)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
-	return echo.NewHTTPError(http.StatusNotFound, "this id doesnot exist")
+	return echo.NewHTTPError(http.StatusCreated, returnedPost)
 }
