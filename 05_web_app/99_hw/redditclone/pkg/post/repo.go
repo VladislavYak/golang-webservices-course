@@ -135,3 +135,80 @@ func (pp *PostRepo) DeleteComment(id string, commentId string) (*Post, error) {
 	}
 	return nil, errors.New("this id doesnot exist")
 }
+
+// yakovlev: add proper error handling
+func (pp *PostRepo) Upvote(id string, user_id string) (*Post, error) {
+	pp.Mutex.Lock()
+	defer pp.Mutex.Unlock()
+
+	for i, Post := range pp.Data {
+		if Post.Id == id {
+			for j, voteIter := range Post.Votes {
+				if voteIter.User == user_id {
+
+					pp.Data[i].Votes[j].WithVote(1)
+					pp.Data[i].UpdateScore()
+					return pp.Data[i], nil
+				}
+			}
+
+			pp.Data[i].Votes = append(pp.Data[i].Votes, Vote{User: user_id, VoteScore: 1})
+			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
+
+			pp.Data[i].UpdateScore()
+
+			return pp.Data[i], nil
+		}
+	}
+
+	return nil, errors.New("this id doesnot exist")
+}
+
+func (pp *PostRepo) Downvote(id string, user_id string) (*Post, error) {
+	pp.Mutex.Lock()
+	defer pp.Mutex.Unlock()
+
+	for i, Post := range pp.Data {
+		if Post.Id == id {
+			for j, voteIter := range Post.Votes {
+				if voteIter.User == user_id {
+
+					pp.Data[i].Votes[j].WithVote(-1)
+					pp.Data[i].UpdateScore()
+					return pp.Data[i], nil
+				}
+			}
+
+			pp.Data[i].Votes = append(pp.Data[i].Votes, Vote{User: user_id, VoteScore: -1})
+			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
+
+			pp.Data[i].UpdateScore()
+
+			return pp.Data[i], nil
+		}
+	}
+
+	return nil, errors.New("this id doesnot exist")
+}
+
+func (pp *PostRepo) Unvote(id string, user_id string) (*Post, error) {
+	pp.Mutex.Lock()
+	defer pp.Mutex.Unlock()
+
+	for i, Post := range pp.Data {
+		if Post.Id == id {
+			for j, voteIter := range Post.Votes {
+				if voteIter.User == user_id {
+
+					pp.Data[i].Votes = append(pp.Data[i].Votes[:j], pp.Data[i].Votes[j+1:]...)
+					pp.Data[i].UpdateScore()
+					return pp.Data[i], nil
+				}
+			}
+
+			return nil, errors.New("cannot find user for specified post")
+		}
+	}
+
+	return nil, errors.New("this id doesnot exist")
+}

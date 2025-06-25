@@ -141,3 +141,47 @@ func (ph *PostHandler) DeleteComment(c echo.Context) error {
 	}
 	return echo.NewHTTPError(http.StatusCreated, returnedPost)
 }
+
+func (ph *PostHandler) Upvote(c echo.Context) error {
+	id := c.Param("id")
+	us := c.Get("user").(*jwt.Token)
+	claims := us.Claims.(*JwtCustomClaims)
+
+	returnedPost, err := ph.Repo.Upvote(id, claims.Id)
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
+
+	return echo.NewHTTPError(http.StatusOK, returnedPost)
+
+}
+
+func (ph *PostHandler) Downvote(c echo.Context) error {
+	id := c.Param("id")
+	us := c.Get("user").(*jwt.Token)
+	claims := us.Claims.(*JwtCustomClaims)
+
+	returnedPost, err := ph.Repo.Downvote(id, claims.Id)
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
+
+	return echo.NewHTTPError(http.StatusOK, returnedPost)
+}
+
+func (ph *PostHandler) Unvote(c echo.Context) error {
+	id := c.Param("id")
+	us := c.Get("user").(*jwt.Token)
+	claims := us.Claims.(*JwtCustomClaims)
+
+	returnedPost, err := ph.Repo.Unvote(id, claims.Id)
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
+
+	return echo.NewHTTPError(http.StatusOK, returnedPost)
+
+}

@@ -7,8 +7,14 @@ import (
 )
 
 type Vote struct {
-	User int `json:"id"`
-	Vote int `json:"vote"`
+	User      string `json:"id"`
+	VoteScore int    `json:"vote"`
+}
+
+func (v *Vote) WithVote(value int) *Vote {
+	v.VoteScore = value
+
+	return v
 }
 
 type Comment struct {
@@ -63,5 +69,15 @@ func NewPost(category string, postType string, url string, text string, title st
 
 func (p *Post) WithId(id string) *Post {
 	p.Id = id
+	return p
+}
+
+func (p *Post) UpdateScore() *Post {
+	updatedScore := 0
+	for _, vote := range p.Votes {
+		updatedScore += vote.VoteScore
+	}
+
+	p.Score = updatedScore
 	return p
 }

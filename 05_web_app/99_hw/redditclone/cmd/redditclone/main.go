@@ -55,6 +55,10 @@ func main() {
 		g.DELETE("/post/:id", postHandler.DeletePost)
 		g.POST("/post/:id", postHandler.AddComment)
 		g.DELETE("/post/:id/:commentId", postHandler.DeleteComment)
+
+		g.GET("/post/:id/downvote", postHandler.Downvote)
+		g.GET("/post/:id/upvote", postHandler.Upvote)
+		g.GET("/post/:id/unvote", postHandler.Unvote)
 	}
 
 	e.Logger.Fatal(e.Start(":1323"))
