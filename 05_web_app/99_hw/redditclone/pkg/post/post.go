@@ -32,8 +32,8 @@ type Post struct {
 	Id               string    `json:"id"`
 	Category         string    `json:"category"`
 	Type             string    `json:"type"`
-	Url              string    `json:"url"`
-	Text             string    `json:"text"`
+	Url              string    `json:"url,omitempty"`
+	Text             string    `json:"text,omitempty"`
 	Title            string    `json:"title"`
 	Votes            []Vote    `json:"votes"`
 	Comments         []Comment `json:"comments"`

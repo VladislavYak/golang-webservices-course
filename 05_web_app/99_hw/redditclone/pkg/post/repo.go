@@ -85,6 +85,18 @@ func (pp *PostRepo) AddPost(Post *Post) (*Post, error) {
 	return Post, nil
 }
 
+func (pp *PostRepo) DeletePost(Id string) (*Post, error) {
+	for i, value := range pp.Data {
+		if value.Id == Id {
+			pp.Data = append(pp.Data[:i], pp.Data[i+1:]...)
+		}
+		return value, nil
+	}
+
+	return nil, errors.New("this id doesnot exist")
+
+}
+
 func (pp *PostRepo) AddComment(Id string, comment *Comment) (*Post, error) {
 	// add more mutexes handling
 	pp.Mutex.Lock()
@@ -102,7 +114,6 @@ func (pp *PostRepo) AddComment(Id string, comment *Comment) (*Post, error) {
 	return nil, errors.New("post not found")
 }
 
-// yakovlev move DeleteComment here
 func (pp *PostRepo) DeleteComment(id string, commentId string) (*Post, error) {
 
 	pp.Mutex.Lock()

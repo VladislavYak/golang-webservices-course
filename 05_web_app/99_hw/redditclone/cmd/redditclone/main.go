@@ -55,7 +55,6 @@ func main() {
 		g.DELETE("/post/:id", postHandler.DeletePost)
 		g.POST("/post/:id", postHandler.AddComment)
 		g.DELETE("/post/:id/:commentId", postHandler.DeleteComment)
-		// 13) GET /api/user/{USER_LOGIN} - получение всех постов конкретного пользователя
 	}
 
 	e.Logger.Fatal(e.Start(":1323"))

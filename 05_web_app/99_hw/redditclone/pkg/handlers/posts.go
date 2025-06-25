@@ -13,8 +13,8 @@ import (
 type PostParams struct {
 	Category string `json:"category"`
 	Type     string `json:"type"`
-	Url      string `json:"url"`
-	Text     string `json:"text"`
+	Url      string `json:"url,omitempty"`
+	Text     string `json:"text,omitempty"`
 	Title    string `json:"title"`
 }
 
@@ -71,8 +71,6 @@ func (ph *PostHandler) GetPostByUsername(c echo.Context) error {
 }
 
 func (ph *PostHandler) PostPost(c echo.Context) error {
-	// yakovlev: корнер кейс, когда текст - есть только текст, но нет урл
-	// когда урл, нет текст
 	us := c.Get("user").(*jwt.Token)
 	claims := us.Claims.(*JwtCustomClaims)
 
@@ -91,7 +89,6 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 	return c.JSON(http.StatusCreated, postReturned)
 }
 
-// yakovlev: use repo here
 func (ph *PostHandler) DeletePost(c echo.Context) error {
 
 	id := c.Param("id")
@@ -100,14 +97,12 @@ func (ph *PostHandler) DeletePost(c echo.Context) error {
 	// 	return echo.NewHTTPError(http.StatusBadRequest, "got invalid id")
 	// }
 
-	for i, value := range ph.Repo.Data {
-		if value.Id == id {
-			ph.Repo.Data = append(ph.Repo.Data[:i], ph.Repo.Data[i+1:]...)
-		}
-		return c.JSON(http.StatusOK, value)
+	deletedPost, err := ph.Repo.DeletePost(id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
 
-	return echo.NewHTTPError(http.StatusNotFound, "this id doesnot exist")
+	return c.JSON(http.StatusOK, deletedPost)
 }
 
 func (ph *PostHandler) AddComment(c echo.Context) error {
