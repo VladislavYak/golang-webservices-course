@@ -1,0 +1,15 @@
+version: '3'
+
+
+services:
+    db:
+      image: postgres:13
+      volumes:
+      # # - dev-db-data:/var/lib/postgresql/data
+      - ./ddl:/docker-entrypoint-initdb.d
+      ports:
+        - "5432:5432"
+      environment:
+        - POSTGRES_DB=golang
+        - POSTGRES_USER=yakovlev
+        - POSTGRES_PASSWORD=qwerty
