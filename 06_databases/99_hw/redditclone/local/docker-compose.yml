@@ -13,3 +13,9 @@ services:
         - POSTGRES_DB=golang
         - POSTGRES_USER=yakovlev
         - POSTGRES_PASSWORD=qwerty
+    mongodb:
+      image: 'mongo:5'
+      environment:
+        - MONGO_INITDB_DATABASE=coursera
+      ports:
+        - '27017-27019:27017-27019'

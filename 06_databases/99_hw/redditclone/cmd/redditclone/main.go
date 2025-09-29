@@ -18,7 +18,7 @@ const (
 )
 
 func main() {
-	PostRepo := post.NewPostRepo()
+	PostRepo := post.NewPostRepoMongo()
 	UserRepo := user.NewUserRepo()
 
 	postHandler := handlers.PostHandler{Repo: *PostRepo}

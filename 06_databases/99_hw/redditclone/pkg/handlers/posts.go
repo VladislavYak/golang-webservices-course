@@ -19,7 +19,7 @@ type PostParams struct {
 }
 
 type PostHandler struct {
-	Repo post.PostRepo
+	Repo post.PostRepoMongo
 }
 
 func (ph *PostHandler) GetPosts(c echo.Context) error {
