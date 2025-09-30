@@ -54,19 +54,14 @@ func (pp *PostRepoMongo) GetAllPosts() ([]*Post, error) {
 	}
 
 	var Posts []*Post
-	for cursor.Next(context.TODO()) {
-		var post Post
-		err = cursor.Decode(&post)
-		if err != nil {
-			panic(err)
-		}
-		Posts = append(Posts, &post)
-
+	if err = cursor.All(context.TODO(), &Posts); err != nil {
+		panic(err)
 	}
-	// if err := cursor.All(context.TODO(), &Posts); err != nil {
-	// 	// change panic to something
-	// 	panic(err)
-	// }
+
+	for _, post := range Posts {
+		post.Id = string(post.MongoId)
+	}
+
 	return Posts, nil
 }
 
@@ -84,33 +79,59 @@ func (pp *PostRepoMongo) GetPostsByCategoryName(CategoryName string) ([]*Post, e
 }
 
 func (pp *PostRepoMongo) GetPostByID(ID string) (*Post, error) {
-	// for _, post := range pp.Data {
-	// 	if post.Id == ID {
-	// 		return post, nil
-	// 	}
-	// }
-	return nil, errors.New("not found")
+
+	value, _ := bson.ObjectIDFromHex(ID)
+
+	fmt.Println("GetPostByID, value", value)
+
+	filter := bson.M{"_id": value}
+
+	var Post Post
+	err := pp.Collection.FindOne(context.TODO(), filter).Decode(&Post)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Post GetPostByID", Post)
+
+	return &Post, nil
 }
 
 func (pp *PostRepoMongo) GetPostsByUsername(Username string) ([]*Post, error) {
-	res := []*Post{}
+	cursor, err := pp.Collection.Find(context.TODO(), bson.M{"author.username": Username})
 
-	// for _, post := range pp.Data {
-	// 	if post.Author.Username == Username {
-	// 		res = append(res, post)
-	// 	}
-	// }
-	return res, nil
+	if err != nil {
+		panic(err)
+	}
+	var Posts []*Post
+	if err = cursor.All(context.TODO(), &Posts); err != nil {
+		panic(err)
+	}
 
+	return Posts, nil
 }
 
 func (pp *PostRepoMongo) UpdatePostViews(ID string) error {
-	// for _, Post := range pp.Data {
-	// 	if Post.Id == ID {
-	// 		Post.Views += 1
-	// 		return nil
-	// 	}
-	// }
+
+	value, _ := bson.ObjectIDFromHex(ID)
+
+	fmt.Println("GetPostByID, value", value)
+
+	filter := bson.D{{Key: "_id", Value: value}}
+	update := bson.D{{"$inc", bson.M{"views": 1}}}
+
+	result, err := pp.Collection.UpdateOne(context.TODO(), filter, update)
+
+	if err != nil {
+		panic(err)
+	} else {
+		fmt.Printf("Documents matched: %v\n", result.MatchedCount)
+		fmt.Printf("Documents updated: %v\n", result.ModifiedCount)
+		return nil
+	}
+
+	// return &Post, nil
 	return errors.New("not found")
 }
 

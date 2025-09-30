@@ -37,7 +37,7 @@ func (c *Comment) WithId(id string) *Comment {
 
 // need adding more fields
 type Post struct {
-	MongoId          MongoObjectID `bson:"_id,omitempty"`
+	MongoId          MongoObjectID `bson:"_id,omitempty" json:"-"`
 	Id               string        `json:"id"`
 	Category         string        `json:"category"`
 	Type             string        `json:"type"`
