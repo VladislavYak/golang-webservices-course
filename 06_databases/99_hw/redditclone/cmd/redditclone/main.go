@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/VladislavYak/redditclone/pkg/handlers"
-	"github.com/VladislavYak/redditclone/pkg/post"
+	// "github.com/VladislavYak/redditclone/pkg/post"
+	"github.com/VladislavYak/redditclone/pkg/application"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
 	"github.com/VladislavYak/redditclone/pkg/user"
 	jwt "github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -18,10 +20,13 @@ const (
 )
 
 func main() {
-	PostRepo := post.NewPostRepoMongo()
+	PostRepo := ram.NewPostRepo()
 	UserRepo := user.NewUserRepo()
 
-	postHandler := handlers.PostHandler{Repo: *PostRepo}
+	PostImpl := application.NewPostImpl(PostRepo)
+
+	postHandler := handlers.PostHandler{Implementation: PostImpl}
+
 	registerHandler := handlers.RegisterHandler{UserRepo: *UserRepo}
 	loginHandler := handlers.LoginHandler{UserRepo: *UserRepo}
 
@@ -56,12 +61,12 @@ func main() {
 
 		g.POST("/posts", postHandler.PostPost)
 		g.DELETE("/post/:id", postHandler.DeletePost)
-		g.POST("/post/:id", postHandler.AddComment)
-		g.DELETE("/post/:id/:commentId", postHandler.DeleteComment)
+		// g.POST("/post/:id", postHandler.AddComment)
+		// g.DELETE("/post/:id/:commentId", postHandler.DeleteComment)
 
-		g.GET("/post/:id/downvote", postHandler.Downvote)
-		g.GET("/post/:id/upvote", postHandler.Upvote)
-		g.GET("/post/:id/unvote", postHandler.Unvote)
+		// g.GET("/post/:id/downvote", postHandler.Downvote)
+		// g.GET("/post/:id/upvote", postHandler.Upvote)
+		// g.GET("/post/:id/unvote", postHandler.Unvote)
 	}
 
 	e.Logger.Fatal(e.Start(":1323"))

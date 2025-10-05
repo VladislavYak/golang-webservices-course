@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 
+	"github.com/VladislavYak/redditclone/pkg/application"
 	"github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/user"
 	"github.com/golang-jwt/jwt/v5"
@@ -19,11 +20,11 @@ type PostParams struct {
 }
 
 type PostHandler struct {
-	Repo post.PostRepoMongo
+	Implementation application.PostInterface
 }
 
 func (ph *PostHandler) GetPosts(c echo.Context) error {
-	posts, err := ph.Repo.GetAllPosts()
+	posts, err := ph.Implementation.GetAll(context.TODO())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot get posts")
 	}
@@ -34,7 +35,7 @@ func (ph *PostHandler) GetPosts(c echo.Context) error {
 func (ph *PostHandler) GetPostsByCategoryName(c echo.Context) error {
 	CategoryName := c.Param("CategoryName")
 
-	posts, err := ph.Repo.GetPostsByCategoryName(CategoryName)
+	posts, err := ph.Implementation.GetPostsByCategoryName(context.TODO(), CategoryName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot get posts")
 	}
@@ -45,11 +46,11 @@ func (ph *PostHandler) GetPostsByCategoryName(c echo.Context) error {
 func (ph *PostHandler) GetPostByID(c echo.Context) error {
 	id := c.Param("id")
 
-	if err := ph.Repo.UpdatePostViews(id); err != nil {
-		return err
-	}
+	// if err := ph.Repo.UpdatePostViews(id); err != nil {
+	// 	return err
+	// }
 
-	post, err := ph.Repo.GetPostByID(id)
+	post, err := ph.Implementation.GetByID(context.TODO(), id)
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,7 @@ func (ph *PostHandler) GetPostByID(c echo.Context) error {
 func (ph *PostHandler) GetPostByUsername(c echo.Context) error {
 	username := c.Param("username")
 
-	post, err := ph.Repo.GetPostsByUsername(username)
+	post, err := ph.Implementation.GetByUsername(context.TODO(), username)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 
 	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, *user.NewUser(claims.Name).WithID(claims.Id))
 
-	postReturned, err := ph.Repo.AddPost(Post)
+	postReturned, err := ph.Implementation.Create(context.TODO(), Post)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot add post")
 	}
@@ -97,7 +98,7 @@ func (ph *PostHandler) DeletePost(c echo.Context) error {
 	// 	return echo.NewHTTPError(http.StatusBadRequest, "got invalid id")
 	// }
 
-	deletedPost, err := ph.Repo.DeletePost(id)
+	deletedPost, err := ph.Implementation.Delete(context.TODO(), id)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
@@ -105,83 +106,83 @@ func (ph *PostHandler) DeletePost(c echo.Context) error {
 	return c.JSON(http.StatusOK, deletedPost)
 }
 
-func (ph *PostHandler) AddComment(c echo.Context) error {
-	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*JwtCustomClaims)
+// func (ph *PostHandler) AddComment(c echo.Context) error {
+// 	us := c.Get("user").(*jwt.Token)
+// 	claims := us.Claims.(*JwtCustomClaims)
 
-	id := c.Param("id")
+// 	id := c.Param("id")
 
-	var body struct {
-		Comment string `json:"comment"`
-	}
+// 	var body struct {
+// 		Comment string `json:"comment"`
+// 	}
 
-	fmt.Println("body", body)
+// 	fmt.Println("body", body)
 
-	if err := c.Bind(&body); err != nil {
-		return c.String(http.StatusBadRequest, err.Error())
-	}
+// 	if err := c.Bind(&body); err != nil {
+// 		return c.String(http.StatusBadRequest, err.Error())
+// 	}
 
-	Comment := post.NewComment(*user.NewUser(claims.Name).WithID(claims.Id), body.Comment)
+// 	Comment := post.NewComment(*user.NewUser(claims.Name).WithID(claims.Id), body.Comment)
 
-	returnedPost, err := ph.Repo.AddComment(id, Comment)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
+// 	returnedPost, err := ph.Repo.AddComment(id, Comment)
+// 	if err != nil {
+// 		return echo.NewHTTPError(http.StatusBadRequest, err)
+// 	}
 
-	return echo.NewHTTPError(http.StatusCreated, returnedPost)
-}
+// 	return echo.NewHTTPError(http.StatusCreated, returnedPost)
+// }
 
-func (ph *PostHandler) DeleteComment(c echo.Context) error {
-	id := c.Param("id")
-	commentId := c.Param("commentId")
+// func (ph *PostHandler) DeleteComment(c echo.Context) error {
+// 	id := c.Param("id")
+// 	commentId := c.Param("commentId")
 
-	returnedPost, err := ph.Repo.DeleteComment(id, commentId)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
-	return echo.NewHTTPError(http.StatusCreated, returnedPost)
-}
+// 	returnedPost, err := ph.Repo.DeleteComment(id, commentId)
+// 	if err != nil {
+// 		return echo.NewHTTPError(http.StatusBadRequest, err)
+// 	}
+// 	return echo.NewHTTPError(http.StatusCreated, returnedPost)
+// }
 
-func (ph *PostHandler) Upvote(c echo.Context) error {
-	id := c.Param("id")
-	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*JwtCustomClaims)
+// func (ph *PostHandler) Upvote(c echo.Context) error {
+// 	id := c.Param("id")
+// 	us := c.Get("user").(*jwt.Token)
+// 	claims := us.Claims.(*JwtCustomClaims)
 
-	returnedPost, err := ph.Repo.Upvote(id, claims.Id)
+// 	returnedPost, err := ph.Repo.Upvote(id, claims.Id)
 
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
+// 	if err != nil {
+// 		return echo.NewHTTPError(http.StatusBadRequest, err)
+// 	}
 
-	return echo.NewHTTPError(http.StatusOK, returnedPost)
+// 	return echo.NewHTTPError(http.StatusOK, returnedPost)
 
-}
+// }
 
-func (ph *PostHandler) Downvote(c echo.Context) error {
-	id := c.Param("id")
-	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*JwtCustomClaims)
+// func (ph *PostHandler) Downvote(c echo.Context) error {
+// 	id := c.Param("id")
+// 	us := c.Get("user").(*jwt.Token)
+// 	claims := us.Claims.(*JwtCustomClaims)
 
-	returnedPost, err := ph.Repo.Downvote(id, claims.Id)
+// 	returnedPost, err := ph.Repo.Downvote(id, claims.Id)
 
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
+// 	if err != nil {
+// 		return echo.NewHTTPError(http.StatusBadRequest, err)
+// 	}
 
-	return echo.NewHTTPError(http.StatusOK, returnedPost)
-}
+// 	return echo.NewHTTPError(http.StatusOK, returnedPost)
+// }
 
-func (ph *PostHandler) Unvote(c echo.Context) error {
-	id := c.Param("id")
-	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*JwtCustomClaims)
+// func (ph *PostHandler) Unvote(c echo.Context) error {
+// 	id := c.Param("id")
+// 	us := c.Get("user").(*jwt.Token)
+// 	claims := us.Claims.(*JwtCustomClaims)
 
-	returnedPost, err := ph.Repo.Unvote(id, claims.Id)
+// 	returnedPost, err := ph.Repo.Unvote(id, claims.Id)
 
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
+// 	if err != nil {
+// 		return echo.NewHTTPError(http.StatusBadRequest, err)
+// 	}
 
-	return echo.NewHTTPError(http.StatusOK, returnedPost)
+// 	return echo.NewHTTPError(http.StatusOK, returnedPost)
 
-}
+// }

@@ -58,10 +58,6 @@ func (pp *PostRepoMongo) GetAllPosts() ([]*Post, error) {
 		panic(err)
 	}
 
-	for _, post := range Posts {
-		post.Id = string(post.MongoId)
-	}
-
 	return Posts, nil
 }
 

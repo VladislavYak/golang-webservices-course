@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/post"
@@ -42,7 +41,7 @@ func main() {
 		// change panic to something
 		panic(err)
 	}
-	fmt.Println("posts", Posts[0].MongoId)
+	// fmt.Println("posts", Posts[0].MongoId)
 
 	// fmt.Printf("Inserted document with _id: %v\n", result.InsertedID)
 
