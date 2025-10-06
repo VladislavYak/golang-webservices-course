@@ -4,7 +4,8 @@ import (
 	"github.com/VladislavYak/redditclone/pkg/handlers"
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
+	// "github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
 	"github.com/VladislavYak/redditclone/pkg/user"
 	jwt "github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -20,7 +21,8 @@ const (
 )
 
 func main() {
-	PostRepo := ram.NewPostRepo()
+	PostRepo := mongodb.NewPostRepoMongo()
+	// PostRepo := ram.NewPostRepo()
 	UserRepo := user.NewUserRepo()
 
 	PostImpl := application.NewPostImpl(PostRepo)

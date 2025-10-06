@@ -1,11 +1,13 @@
-package post
+package mongodb
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/post"
+	"github.com/VladislavYak/redditclone/pkg/user"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -14,9 +16,6 @@ import (
 var _ post.PostRepository = new(PostRepoMongo)
 
 type PostRepoMongo struct {
-	lastID    int
-	commentID int
-
 	Client     *mongo.Client
 	Collection *mongo.Collection
 }
@@ -25,8 +24,8 @@ func NewPostRepoMongo() *PostRepoMongo {
 
 	client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
 
-	// ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	// defer cancel()
+	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
 	// defer func() {
 	// 	if err := client.Disconnect(ctx); err != nil {
@@ -43,11 +42,11 @@ func NewPostRepoMongo() *PostRepoMongo {
 
 	fmt.Println("Connection successfullt initialized")
 	return &PostRepoMongo{
-		0, 0, client, collection,
+		client, collection,
 	}
 }
 
-func (pp *PostRepoMongo) GetAllPosts() ([]*post.Post, error) {
+func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) {
 	fmt.Println("inside GetAllPosts")
 	cursor, err := pp.Collection.Find(context.TODO(), bson.D{})
 
@@ -56,15 +55,53 @@ func (pp *PostRepoMongo) GetAllPosts() ([]*post.Post, error) {
 		panic(err)
 	}
 
-	var Posts []*post.Post
-	if err = cursor.All(context.TODO(), &Posts); err != nil {
+	type postTmp struct {
+		ObjectID         bson.ObjectID  `bson:"_id,omitempty"`
+		Category         string         `json:"category"`
+		Type             string         `json:"type"`
+		Url              string         `json:"url,omitempty"`
+		Text             string         `json:"text,omitempty"`
+		Title            string         `json:"title"`
+		Votes            []post.Vote    `json:"votes"`
+		Comments         []post.Comment `json:"comments"`
+		Created          time.Time      `json:"created"`
+		UpvotePercentage int            `json:"upvotePercentage"`
+		Score            int            `json:"score"`
+		Views            int            `json:"views"`
+		Author           user.User      `json:"author"`
+	}
+
+	var postsTmp []*postTmp
+
+	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
 		panic(err)
+	}
+
+	var Posts []*post.Post
+
+	for _, postIter := range postsTmp {
+		Posts = append(Posts, &post.Post{
+			Id:               postIter.ObjectID.Hex(),
+			Category:         postIter.Category,
+			Type:             postIter.Type,
+			Url:              postIter.Url,
+			Text:             postIter.Text,
+			Title:            postIter.Title,
+			Votes:            postIter.Votes,
+			Comments:         postIter.Comments,
+			Created:          postIter.Created,
+			UpvotePercentage: postIter.UpvotePercentage,
+			Score:            postIter.Score,
+			Views:            postIter.Views,
+			Author:           postIter.Author,
+		})
+
 	}
 
 	return Posts, nil
 }
 
-func (pp *PostRepoMongo) GetPostsByCategoryName(CategoryName string) ([]*post.Post, error) {
+func (pp *PostRepoMongo) GetPostsByCategoryName(ctx context.Context, CategoryName string) ([]*post.Post, error) {
 	cursor, err := pp.Collection.Find(context.TODO(), bson.D{{Key: "category", Value: CategoryName}})
 
 	if err != nil {
@@ -77,8 +114,7 @@ func (pp *PostRepoMongo) GetPostsByCategoryName(CategoryName string) ([]*post.Po
 	return Posts, nil
 }
 
-func (pp *PostRepoMongo) GetPostByID(ID string) (*post.Post, error) {
-
+func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post, error) {
 	value, _ := bson.ObjectIDFromHex(ID)
 
 	fmt.Println("GetPostByID, value", value)
@@ -97,7 +133,7 @@ func (pp *PostRepoMongo) GetPostByID(ID string) (*post.Post, error) {
 	return &Post, nil
 }
 
-func (pp *PostRepoMongo) GetPostsByUsername(Username string) ([]*post.Post, error) {
+func (pp *PostRepoMongo) GetPostsByUsername(ctx context.Context, Username string) ([]*post.Post, error) {
 	cursor, err := pp.Collection.Find(context.TODO(), bson.M{"author.username": Username})
 
 	if err != nil {
@@ -134,7 +170,7 @@ func (pp *PostRepoMongo) UpdatePostViews(ID string) error {
 	return errors.New("not found")
 }
 
-func (pp *PostRepoMongo) AddPost(Post *post.Post) (*post.Post, error) {
+func (pp *PostRepoMongo) AddPost(ctx context.Context, Post *post.Post) (*post.Post, error) {
 
 	result, _ := pp.Collection.InsertOne(context.TODO(), Post)
 
@@ -142,7 +178,7 @@ func (pp *PostRepoMongo) AddPost(Post *post.Post) (*post.Post, error) {
 	return Post, nil
 }
 
-func (pp *PostRepoMongo) DeletePost(Id string) (*post.Post, error) {
+func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post, error) {
 	// for i, value := range pp.Data {
 	// 	if value.Id == Id {
 	// 		pp.Data = append(pp.Data[:i], pp.Data[i+1:]...)
