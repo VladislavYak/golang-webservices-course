@@ -97,44 +97,44 @@ func (pp *PostRepo) DeletePost(Id string) (*Post, error) {
 
 }
 
-func (pp *PostRepo) AddComment(Id string, comment *Comment) (*Post, error) {
-	// add more mutexes handling
-	pp.Mutex.Lock()
-	defer pp.Mutex.Unlock()
+// func (pp *PostRepo) AddComment(Id string, comment *comment.Comment) (*Post, error) {
+// 	// add more mutexes handling
+// 	pp.Mutex.Lock()
+// 	defer pp.Mutex.Unlock()
 
-	for _, Post := range pp.Data {
-		if Post.Id == Id {
-			Post.Comments = append(Post.Comments, *comment.WithId(strconv.Itoa(pp.commentID)))
+// 	for _, Post := range pp.Data {
+// 		if Post.Id == Id {
+// 			Post.Comments = append(Post.Comments, *comment.WithId(strconv.Itoa(pp.commentID)))
 
-			pp.commentID++
-			return Post, nil
-		}
-	}
+// 			pp.commentID++
+// 			return Post, nil
+// 		}
+// 	}
 
-	return nil, errors.New("post not found")
-}
+// 	return nil, errors.New("post not found")
+// }
 
-func (pp *PostRepo) DeleteComment(id string, commentId string) (*Post, error) {
+// func (pp *PostRepo) DeleteComment(id string, commentId string) (*Post, error) {
 
-	pp.Mutex.Lock()
-	defer pp.Mutex.Unlock()
-	for i, post := range pp.Data {
-		if post.Id == id {
+// 	pp.Mutex.Lock()
+// 	defer pp.Mutex.Unlock()
+// 	for i, post := range pp.Data {
+// 		if post.Id == id {
 
-			for j, comment := range post.Comments {
-				if comment.Id == commentId {
-					post.Comments = append(post.Comments[:j], post.Comments[j+1:]...)
-					pp.Data[i] = post
-					return post, nil
-				}
+// 			for j, comment := range post.Comments {
+// 				if comment.Id == commentId {
+// 					post.Comments = append(post.Comments[:j], post.Comments[j+1:]...)
+// 					pp.Data[i] = post
+// 					return post, nil
+// 				}
 
-			}
+// 			}
 
-		}
+// 		}
 
-	}
-	return nil, errors.New("this id doesnot exist")
-}
+// 	}
+// 	return nil, errors.New("this id doesnot exist")
+// }
 
 // yakovlev: add proper error handling
 func (pp *PostRepo) Upvote(id string, user_id string) (*Post, error) {

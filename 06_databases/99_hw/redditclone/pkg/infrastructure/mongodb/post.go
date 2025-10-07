@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/VladislavYak/redditclone/pkg/post"
-	"github.com/VladislavYak/redditclone/pkg/user"
+	"github.com/VladislavYak/redditclone/pkg/domain/comment"
+	"github.com/VladislavYak/redditclone/pkg/domain/post"
+	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -56,19 +57,19 @@ func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) 
 	}
 
 	type postTmp struct {
-		ObjectID         bson.ObjectID  `bson:"_id,omitempty"`
-		Category         string         `json:"category"`
-		Type             string         `json:"type"`
-		Url              string         `json:"url,omitempty"`
-		Text             string         `json:"text,omitempty"`
-		Title            string         `json:"title"`
-		Votes            []post.Vote    `json:"votes"`
-		Comments         []post.Comment `json:"comments"`
-		Created          time.Time      `json:"created"`
-		UpvotePercentage int            `json:"upvotePercentage"`
-		Score            int            `json:"score"`
-		Views            int            `json:"views"`
-		Author           user.User      `json:"author"`
+		ObjectID         bson.ObjectID     `bson:"_id,omitempty"`
+		Category         string            `json:"category"`
+		Type             string            `json:"type"`
+		Url              string            `json:"url,omitempty"`
+		Text             string            `json:"text,omitempty"`
+		Title            string            `json:"title"`
+		Votes            []post.Vote       `json:"votes"`
+		Comments         []comment.Comment `json:"comments"`
+		Created          time.Time         `json:"created"`
+		UpvotePercentage int               `json:"upvotePercentage"`
+		Score            int               `json:"score"`
+		Views            int               `json:"views"`
+		Author           user.User         `json:"author"`
 	}
 
 	var postsTmp []*postTmp
@@ -80,6 +81,7 @@ func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) 
 	var Posts []*post.Post
 
 	for _, postIter := range postsTmp {
+
 		Posts = append(Posts, &post.Post{
 			Id:               postIter.ObjectID.Hex(),
 			Category:         postIter.Category,

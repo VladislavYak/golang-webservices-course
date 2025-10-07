@@ -5,8 +5,8 @@ import (
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
 	// "github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
+	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
-	"github.com/VladislavYak/redditclone/pkg/user"
 	jwt "github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -22,12 +22,15 @@ const (
 
 func main() {
 	PostRepo := mongodb.NewPostRepoMongo()
+	CommentRepo := mongodb.NewCommentRepoMongo()
 	// PostRepo := ram.NewPostRepo()
 	UserRepo := user.NewUserRepo()
 
 	PostImpl := application.NewPostImpl(PostRepo)
+	CommentImpl := application.NewCommentImpl(PostRepo, CommentRepo)
 
 	postHandler := handlers.PostHandler{Implementation: PostImpl}
+	commentHandler := handlers.CommentHandler{}
 
 	registerHandler := handlers.RegisterHandler{UserRepo: *UserRepo}
 	loginHandler := handlers.LoginHandler{UserRepo: *UserRepo}
@@ -63,8 +66,8 @@ func main() {
 
 		g.POST("/posts", postHandler.PostPost)
 		g.DELETE("/post/:id", postHandler.DeletePost)
-		// g.POST("/post/:id", postHandler.AddComment)
-		// g.DELETE("/post/:id/:commentId", postHandler.DeleteComment)
+		g.POST("/post/:id", postHandler.AddComment)
+		g.DELETE("/post/:id/:commentId", postHandler.DeleteComment)
 
 		// g.GET("/post/:id/downvote", postHandler.Downvote)
 		// g.GET("/post/:id/upvote", postHandler.Upvote)

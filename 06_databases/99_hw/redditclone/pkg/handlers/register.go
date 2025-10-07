@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/VladislavYak/redditclone/pkg/user"
+	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )

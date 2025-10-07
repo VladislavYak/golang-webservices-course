@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
-	"github.com/VladislavYak/redditclone/pkg/post"
-	"github.com/VladislavYak/redditclone/pkg/user"
+	"github.com/VladislavYak/redditclone/pkg/domain/post"
+	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -33,9 +33,11 @@ func (ph *PostHandler) GetPosts(c echo.Context) error {
 }
 
 func (ph *PostHandler) GetPostsByCategoryName(c echo.Context) error {
+
 	CategoryName := c.Param("CategoryName")
 
 	posts, err := ph.Implementation.GetPostsByCategoryName(context.TODO(), CategoryName)
+
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot get posts")
 	}
@@ -93,10 +95,6 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 func (ph *PostHandler) DeletePost(c echo.Context) error {
 
 	id := c.Param("id")
-	// idInt, err := strconv.Atoi(id)
-	// if err != nil {
-	// 	return echo.NewHTTPError(http.StatusBadRequest, "got invalid id")
-	// }
 
 	deletedPost, err := ph.Implementation.Delete(context.TODO(), id)
 	if err != nil {

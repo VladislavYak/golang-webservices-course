@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/VladislavYak/redditclone/pkg/post"
+	"github.com/VladislavYak/redditclone/pkg/domain/post"
 )
 
 var _ post.PostRepository = new(PostRepo)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	postP "github.com/VladislavYak/redditclone/pkg/post"
+	postP "github.com/VladislavYak/redditclone/pkg/domain/post"
 )
 
 // https://gitlab.com/slax0rr/go-beer-api/-/blob/master/application/beer.go?ref_type=heads#L25
@@ -19,7 +19,6 @@ type PostInterface interface {
 	GetByUsername(context.Context, string) ([]*postP.Post, error)
 }
 
-// Beer application layer between the intarface and the domain implementation of beer.
 type PostImpl struct {
 	repo postP.PostRepository
 }
@@ -28,7 +27,7 @@ func NewPostImpl(repo postP.PostRepository) *PostImpl {
 	return &PostImpl{repo: repo}
 }
 
-// Compile-time check if BeerImpl implements Beer
+// Compile-time check if PostImpl implements PostInterface
 var _ PostInterface = new(PostImpl)
 
 func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, error) {

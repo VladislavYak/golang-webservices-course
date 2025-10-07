@@ -4,21 +4,22 @@ import (
 	"context"
 	"time"
 
-	"github.com/VladislavYak/redditclone/pkg/user"
+	"github.com/VladislavYak/redditclone/pkg/domain/comment"
+	"github.com/VladislavYak/redditclone/pkg/domain/user"
 )
 
 // need adding more fields
 type Post struct {
-	Id               string    `json:"id"`
-	Category         string    `json:"category"`
-	Type             string    `json:"type"`
-	Url              string    `json:"url,omitempty"`
-	Text             string    `json:"text,omitempty"`
-	Title            string    `json:"title"`
-	Votes            []Vote    `json:"votes"`
-	Comments         []Comment `json:"comments"`
-	Created          time.Time `json:"created"`
-	UpvotePercentage int       `json:"upvotePercentage"`
+	Id               string            `json:"id"`
+	Category         string            `json:"category"`
+	Type             string            `json:"type"`
+	Url              string            `json:"url,omitempty"`
+	Text             string            `json:"text,omitempty"`
+	Title            string            `json:"title"`
+	Votes            []Vote            `json:"votes"`
+	Comments         []comment.Comment `json:"comments"`
+	Created          time.Time         `json:"created"`
+	UpvotePercentage int               `json:"upvotePercentage"`
 
 	Score int `json:"score"`
 	Views int `json:"views"`
@@ -37,7 +38,7 @@ func NewPost(category string, postType string, url string, text string, title st
 		Created:  time.Now().UTC(),
 		Score:    0,
 		Views:    0,
-		Comments: []Comment{},
+		Comments: []comment.Comment{},
 	}
 }
 
@@ -75,20 +76,4 @@ func (v *Vote) WithVote(value int) *Vote {
 	v.VoteScore = value
 
 	return v
-}
-
-type Comment struct {
-	Created time.Time `json:"created"`
-	Author  user.User `json:"author"`
-	Body    string    `json:"body"`
-	Id      string    `json:"id"`
-}
-
-func NewComment(Author user.User, Body string) *Comment {
-	return &Comment{Created: time.Now().UTC(), Author: Author, Body: Body}
-}
-
-func (c *Comment) WithId(id string) *Comment {
-	c.Id = id
-	return c
 }
