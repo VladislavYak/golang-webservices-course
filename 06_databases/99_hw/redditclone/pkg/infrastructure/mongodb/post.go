@@ -11,39 +11,20 @@ import (
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 var _ post.PostRepository = new(PostRepoMongo)
 
 type PostRepoMongo struct {
-	Client     *mongo.Client
 	Collection *mongo.Collection
 }
 
-func NewPostRepoMongo() *PostRepoMongo {
+func NewPostRepoMongo(client *mongo.Client, dbName, collectionName string) *PostRepoMongo {
 
-	client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
+	collection := client.Database(dbName).Collection(collectionName)
 
-	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// defer func() {
-	// 	if err := client.Disconnect(ctx); err != nil {
-	// 		panic(err)
-	// 	}
-	// }()
-
-	collection := client.Database("testing").Collection("posts")
-
-	err := client.Ping(context.TODO(), nil)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("Connection successfullt initialized")
 	return &PostRepoMongo{
-		client, collection,
+		Collection: collection,
 	}
 }
 
@@ -181,129 +162,14 @@ func (pp *PostRepoMongo) AddPost(ctx context.Context, Post *post.Post) (*post.Po
 }
 
 func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post, error) {
-	// for i, value := range pp.Data {
-	// 	if value.Id == Id {
-	// 		pp.Data = append(pp.Data[:i], pp.Data[i+1:]...)
-	// 	}
-	// 	return value, nil
-	// }
+
+	value, _ := bson.ObjectIDFromHex(Id)
+
+	_, err := pp.Collection.DeleteOne(context.TODO(), bson.D{{"_id", value}})
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, errors.New("this id doesnot exist")
 
 }
-
-// func (pp *PostRepoMongo) AddComment(Id string, comment *Comment) (*post.Post, error) {
-// 	// add more mutexes handling
-// 	// pp.Mutex.Lock()
-// 	// defer pp.Mutex.Unlock()
-
-// 	// for _, Post := range pp.Data {
-// 	// 	if Post.Id == Id {
-// 	// 		Post.Comments = append(Post.Comments, *comment.WithId(strconv.Itoa(pp.commentID)))
-
-// 	// 		pp.commentID++
-// 	// 		return Post, nil
-// 	// 	}
-// 	// }
-
-// 	return nil, errors.New("post not found")
-// }
-
-// func (pp *PostRepoMongo) DeleteComment(id string, commentId string) (*Post, error) {
-
-// 	// pp.Mutex.Lock()
-// 	// defer pp.Mutex.Unlock()
-// 	// for i, post := range pp.Data {
-// 	// 	if post.Id == id {
-
-// 	// 		for j, comment := range post.Comments {
-// 	// 			if comment.Id == commentId {
-// 	// 				post.Comments = append(post.Comments[:j], post.Comments[j+1:]...)
-// 	// 				pp.Data[i] = post
-// 	// 				return post, nil
-// 	// 			}
-
-// 	// 		}
-
-// 	// 	}
-
-// 	// }
-// 	return nil, errors.New("this id doesnot exist")
-// }
-
-// yakovlev: add proper error handling
-// func (pp *PostRepoMongo) Upvote(id string, user_id string) (*Post, error) {
-// 	// pp.Mutex.Lock()
-// 	// defer pp.Mutex.Unlock()
-
-// 	// for i, Post := range pp.Data {
-// 	// 	if Post.Id == id {
-// 	// 		for j, voteIter := range Post.Votes {
-// 	// 			if voteIter.User == user_id {
-
-// 	// 				pp.Data[i].Votes[j].WithVote(1)
-// 	// 				pp.Data[i].UpdateScore()
-// 	// 				return pp.Data[i], nil
-// 	// 			}
-// 	// 		}
-
-// 	// 		pp.Data[i].Votes = append(pp.Data[i].Votes, Vote{User: user_id, VoteScore: 1})
-// 	// 		// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
-
-// 	// 		pp.Data[i].UpdateScore()
-
-// 	// 		return pp.Data[i], nil
-// 	// 	}
-// 	// }
-
-// 	return nil, errors.New("this id doesnot exist")
-// }
-
-// func (pp *PostRepoMongo) Downvote(id string, user_id string) (*Post, error) {
-// 	// pp.Mutex.Lock()
-// 	// defer pp.Mutex.Unlock()
-
-// 	// for i, Post := range pp.Data {
-// 	// 	if Post.Id == id {
-// 	// 		for j, voteIter := range Post.Votes {
-// 	// 			if voteIter.User == user_id {
-
-// 	// 				pp.Data[i].Votes[j].WithVote(-1)
-// 	// 				pp.Data[i].UpdateScore()
-// 	// 				return pp.Data[i], nil
-// 	// 			}
-// 	// 		}
-
-// 	// 		pp.Data[i].Votes = append(pp.Data[i].Votes, Vote{User: user_id, VoteScore: -1})
-// 	// 		// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
-
-// 	// 		pp.Data[i].UpdateScore()
-
-// 	// 		return pp.Data[i], nil
-// 	// 	}
-// 	// }
-
-// 	return nil, errors.New("this id doesnot exist")
-// }
-
-// func (pp *PostRepoMongo) Unvote(id string, user_id string) (*Post, error) {
-// 	// pp.Mutex.Lock()
-// 	// defer pp.Mutex.Unlock()
-
-// 	// for i, Post := range pp.Data {
-// 	// 	if Post.Id == id {
-// 	// 		for j, voteIter := range Post.Votes {
-// 	// 			if voteIter.User == user_id {
-
-// 	// 				pp.Data[i].Votes = append(pp.Data[i].Votes[:j], pp.Data[i].Votes[j+1:]...)
-// 	// 				pp.Data[i].UpdateScore()
-// 	// 				return pp.Data[i], nil
-// 	// 			}
-// 	// 		}
-
-// 	// 		return nil, errors.New("cannot find user for specified post")
-// 	// 	}
-// 	// }
-
-// 	return nil, errors.New("this id doesnot exist")
-// }

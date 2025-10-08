@@ -1,41 +1,30 @@
 package mongodb
 
 import (
-	"context"
-	"fmt"
-	"time"
-
+	"github.com/VladislavYak/redditclone/pkg/domain/comment"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type CommentRepoMongo struct {
-	Client     *mongo.Client
 	Collection *mongo.Collection
 }
 
-func NewCommentRepoMongo() *CommentRepoMongo {
+func NewCommentRepoMongo(client *mongo.Client, dbName string, collectionName string) *CommentRepoMongo {
 
-	client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
+	collection := client.Database(dbName).Collection(collectionName)
 
-	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// defer func() {
-	// 	if err := client.Disconnect(ctx); err != nil {
-	// 		panic(err)
-	// 	}
-	// }()
-
-	collection := client.Database("testing").Collection("posts")
-
-	err := client.Ping(context.TODO(), nil)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("Connection successfullt initialized")
 	return &CommentRepoMongo{
-		client, collection,
+		Collection: collection,
 	}
+}
+
+func (cr *CommentRepoMongo) AddComment(Id string, Comment *comment.Comment) error {
+
+	return nil
+
+}
+
+func (cr *CommentRepoMongo) DeleteComment(Id string, CommentId string) error {
+
+	return nil
 }

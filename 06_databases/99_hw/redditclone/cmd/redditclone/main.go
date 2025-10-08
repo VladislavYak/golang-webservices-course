@@ -21,8 +21,15 @@ const (
 )
 
 func main() {
-	PostRepo := mongodb.NewPostRepoMongo()
-	CommentRepo := mongodb.NewCommentRepoMongo()
+	cfg := mongodb.Config{
+		URI:        "mongodb://localhost:27017",
+		Database:   "testing",
+		TimeoutSec: 2,
+	}
+
+	client, _ := mongodb.NewMongoClient(cfg)
+	PostRepo := mongodb.NewPostRepoMongo(client, "testing", "posts")
+	CommentRepo := mongodb.NewCommentRepoMongo(client, "testing", "posts")
 	// PostRepo := ram.NewPostRepo()
 	UserRepo := user.NewUserRepo()
 
@@ -30,7 +37,7 @@ func main() {
 	CommentImpl := application.NewCommentImpl(PostRepo, CommentRepo)
 
 	postHandler := handlers.PostHandler{Implementation: PostImpl}
-	commentHandler := handlers.CommentHandler{}
+	commentHandler := handlers.CommentHandler{Implementation: CommentImpl}
 
 	registerHandler := handlers.RegisterHandler{UserRepo: *UserRepo}
 	loginHandler := handlers.LoginHandler{UserRepo: *UserRepo}
@@ -66,8 +73,8 @@ func main() {
 
 		g.POST("/posts", postHandler.PostPost)
 		g.DELETE("/post/:id", postHandler.DeletePost)
-		g.POST("/post/:id", postHandler.AddComment)
-		g.DELETE("/post/:id/:commentId", postHandler.DeleteComment)
+		g.POST("/post/:id", commentHandler.AddComment)
+		g.DELETE("/post/:id/:commentId", commentHandler.DeleteComment)
 
 		// g.GET("/post/:id/downvote", postHandler.Downvote)
 		// g.GET("/post/:id/upvote", postHandler.Upvote)
