@@ -5,8 +5,9 @@ import (
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
 	// "github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
-	"github.com/VladislavYak/redditclone/pkg/domain/user"
+
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
 	jwt "github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -30,8 +31,7 @@ func main() {
 	client, _ := mongodb.NewMongoClient(cfg)
 	PostRepo := mongodb.NewPostRepoMongo(client, "testing", "posts")
 	CommentRepo := mongodb.NewCommentRepoMongo(client, "testing", "posts")
-	// PostRepo := ram.NewPostRepo()
-	UserRepo := user.NewUserRepo()
+	UserRepo := ram.NewUserRepo()
 
 	PostImpl := application.NewPostImpl(PostRepo)
 	CommentImpl := application.NewCommentImpl(PostRepo, CommentRepo)

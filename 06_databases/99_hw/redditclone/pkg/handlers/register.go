@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -15,7 +16,7 @@ type RegisterForm struct {
 }
 
 type RegisterHandler struct {
-	UserRepo user.UserRepo
+	UserRepo ram.UserRepo
 }
 
 // jwtCustomClaims are custom claims extending default ones.

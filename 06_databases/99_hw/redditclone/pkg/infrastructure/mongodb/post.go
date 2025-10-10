@@ -28,6 +28,40 @@ func NewPostRepoMongo(client *mongo.Client, dbName, collectionName string) *Post
 	}
 }
 
+type postTmp struct {
+	ObjectID         bson.ObjectID     `bson:"_id,omitempty"`
+	Category         string            `json:"category"`
+	Type             string            `json:"type"`
+	Url              string            `json:"url,omitempty"`
+	Text             string            `json:"text,omitempty"`
+	Title            string            `json:"title"`
+	Votes            []post.Vote       `json:"votes"`
+	Comments         []comment.Comment `json:"comments"`
+	Created          time.Time         `json:"created"`
+	UpvotePercentage int               `json:"upvotePercentage"`
+	Score            int               `json:"score"`
+	Views            int               `json:"views"`
+	Author           user.User         `json:"author"`
+}
+
+func (pt *postTmp) ToPost() *post.Post {
+	return &post.Post{
+		Id:               pt.ObjectID.Hex(),
+		Category:         pt.Category,
+		Type:             pt.Type,
+		Url:              pt.Url,
+		Text:             pt.Text,
+		Title:            pt.Title,
+		Votes:            pt.Votes,
+		Comments:         pt.Comments,
+		Created:          pt.Created,
+		UpvotePercentage: pt.UpvotePercentage,
+		Score:            pt.Score,
+		Views:            pt.Views,
+		Author:           pt.Author,
+	}
+}
+
 func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) {
 	fmt.Println("inside GetAllPosts")
 	cursor, err := pp.Collection.Find(context.TODO(), bson.D{})
@@ -37,22 +71,6 @@ func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) 
 		panic(err)
 	}
 
-	type postTmp struct {
-		ObjectID         bson.ObjectID     `bson:"_id,omitempty"`
-		Category         string            `json:"category"`
-		Type             string            `json:"type"`
-		Url              string            `json:"url,omitempty"`
-		Text             string            `json:"text,omitempty"`
-		Title            string            `json:"title"`
-		Votes            []post.Vote       `json:"votes"`
-		Comments         []comment.Comment `json:"comments"`
-		Created          time.Time         `json:"created"`
-		UpvotePercentage int               `json:"upvotePercentage"`
-		Score            int               `json:"score"`
-		Views            int               `json:"views"`
-		Author           user.User         `json:"author"`
-	}
-
 	var postsTmp []*postTmp
 
 	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
@@ -60,24 +78,9 @@ func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) 
 	}
 
 	var Posts []*post.Post
-
 	for _, postIter := range postsTmp {
 
-		Posts = append(Posts, &post.Post{
-			Id:               postIter.ObjectID.Hex(),
-			Category:         postIter.Category,
-			Type:             postIter.Type,
-			Url:              postIter.Url,
-			Text:             postIter.Text,
-			Title:            postIter.Title,
-			Votes:            postIter.Votes,
-			Comments:         postIter.Comments,
-			Created:          postIter.Created,
-			UpvotePercentage: postIter.UpvotePercentage,
-			Score:            postIter.Score,
-			Views:            postIter.Views,
-			Author:           postIter.Author,
-		})
+		Posts = append(Posts, postIter.ToPost())
 
 	}
 
@@ -90,9 +93,17 @@ func (pp *PostRepoMongo) GetPostsByCategoryName(ctx context.Context, CategoryNam
 	if err != nil {
 		panic(err)
 	}
-	var Posts []*post.Post
-	if err = cursor.All(context.TODO(), &Posts); err != nil {
+	// var Posts []*post.Post
+	var postsTmp []*postTmp
+	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
 		panic(err)
+	}
+
+	var Posts []*post.Post
+	for _, postIter := range postsTmp {
+
+		Posts = append(Posts, postIter.ToPost())
+
 	}
 	return Posts, nil
 }
@@ -104,8 +115,10 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 
 	filter := bson.M{"_id": value}
 
-	var Post post.Post
-	err := pp.Collection.FindOne(context.TODO(), filter).Decode(&Post)
+	var postTmp *postTmp
+	err := pp.Collection.FindOne(context.TODO(), filter).Decode(&postTmp)
+
+	Post := postTmp.ToPost()
 
 	if err != nil {
 		panic(err)
@@ -113,7 +126,7 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 
 	fmt.Println("Post GetPostByID", Post)
 
-	return &Post, nil
+	return Post, nil
 }
 
 func (pp *PostRepoMongo) GetPostsByUsername(ctx context.Context, Username string) ([]*post.Post, error) {
@@ -122,9 +135,17 @@ func (pp *PostRepoMongo) GetPostsByUsername(ctx context.Context, Username string
 	if err != nil {
 		panic(err)
 	}
-	var Posts []*post.Post
-	if err = cursor.All(context.TODO(), &Posts); err != nil {
+
+	var postsTmp []*postTmp
+	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
 		panic(err)
+	}
+
+	var Posts []*post.Post
+	for _, postIter := range postsTmp {
+
+		Posts = append(Posts, postIter.ToPost())
+
 	}
 
 	return Posts, nil

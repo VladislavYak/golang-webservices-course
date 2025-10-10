@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/VladislavYak/redditclone/pkg/post"
+	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"

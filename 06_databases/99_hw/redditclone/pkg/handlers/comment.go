@@ -22,6 +22,9 @@ func (ch *CommentHandler) AddComment(c echo.Context) error {
 
 	id := c.Param("id")
 
+	fmt.Println("im inside addComment handler")
+	fmt.Println("id", id)
+
 	var body struct {
 		Comment string `json:"comment"`
 	}

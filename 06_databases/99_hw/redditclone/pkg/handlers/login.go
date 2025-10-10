@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -16,7 +17,7 @@ type LoginForm struct {
 }
 
 type LoginHandler struct {
-	UserRepo user.UserRepo
+	UserRepo ram.UserRepo
 }
 
 func (lh *LoginHandler) Login(c echo.Context) error {
