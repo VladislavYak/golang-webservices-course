@@ -39,6 +39,7 @@ func NewPost(category string, postType string, url string, text string, title st
 		Score:    0,
 		Views:    0,
 		Comments: []comment.Comment{},
+		Votes:    []Vote{},
 	}
 }
 
@@ -47,6 +48,7 @@ func (p *Post) WithId(id string) *Post {
 	return p
 }
 
+// yakovlev: this is should be at repo. Probably.
 func (p *Post) UpdateScore() *Post {
 	updatedScore := 0
 	for _, vote := range p.Votes {
@@ -65,14 +67,14 @@ type PostRepository interface {
 	AddPost(ctx context.Context, Post *Post) (*Post, error)
 	DeletePost(ctx context.Context, Id string) (*Post, error)
 	// Save(ctx context.Context, user *domain.User) error
-	Upvote(ctx context.Context, PostId string, UserId string) (*Post, error)
-	Downvote(ctx context.Context, Id string, UserId string) (*Post, error)
-	Unvote(ctx context.Context, Id string, UserId string) (*Post, error)
+	Upvote(ctx context.Context, PostId string) (*Post, error)
+	Downvote(ctx context.Context, Id string) (*Post, error)
+	Unvote(ctx context.Context, Id string) (*Post, error)
 }
 
 type Vote struct {
-	User      string `json:"id"`
-	VoteScore int    `json:"vote"`
+	User      string `json:"user"`
+	VoteScore int    `json:"vote" bson:"vote"`
 }
 
 func (v *Vote) WithVote(value int) *Vote {

@@ -11,12 +11,14 @@ import (
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 var _ post.PostRepository = new(PostRepoMongo)
 
 type PostRepoMongo struct {
 	Collection *mongo.Collection
+	Client     *mongo.Client
 }
 
 func NewPostRepoMongo(client *mongo.Client, dbName, collectionName string) *PostRepoMongo {
@@ -25,6 +27,7 @@ func NewPostRepoMongo(client *mongo.Client, dbName, collectionName string) *Post
 
 	return &PostRepoMongo{
 		Collection: collection,
+		Client:     client,
 	}
 }
 
@@ -93,7 +96,7 @@ func (pp *PostRepoMongo) GetPostsByCategoryName(ctx context.Context, CategoryNam
 	if err != nil {
 		panic(err)
 	}
-	// var Posts []*post.Post
+
 	var postsTmp []*postTmp
 	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
 		panic(err)
@@ -117,6 +120,8 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 
 	var postTmp *postTmp
 	err := pp.Collection.FindOne(context.TODO(), filter).Decode(&postTmp)
+
+	fmt.Printf("Updated Post:\n%+v\n", postTmp)
 
 	Post := postTmp.ToPost()
 
@@ -176,7 +181,41 @@ func (pp *PostRepoMongo) UpdatePostViews(ID string) error {
 
 func (pp *PostRepoMongo) AddPost(ctx context.Context, Post *post.Post) (*post.Post, error) {
 
-	result, _ := pp.Collection.InsertOne(context.TODO(), Post)
+	type postTmp struct {
+		ObjectID         bson.ObjectID     `bson:"_id,omitempty"`
+		Category         string            `json:"category"`
+		Type             string            `json:"type"`
+		Url              string            `json:"url,omitempty"`
+		Text             string            `json:"text,omitempty"`
+		Title            string            `json:"title"`
+		Votes            []post.Vote       `json:"votes"`
+		Comments         []comment.Comment `json:"comments"`
+		Created          time.Time         `json:"created"`
+		UpvotePercentage int               `json:"upvotePercentage"`
+		Score            int               `json:"score"`
+		Views            int               `json:"views"`
+		Author           user.User         `json:"author"`
+	}
+
+	// prettify it somehow
+	p := &postTmp{
+		// Id:               pt.ObjectID.Hex(),
+		Category:         Post.Category,
+		Type:             Post.Type,
+		Url:              Post.Url,
+		Text:             Post.Text,
+		Title:            Post.Title,
+		Votes:            Post.Votes,
+		Comments:         Post.Comments,
+		Created:          Post.Created,
+		UpvotePercentage: Post.UpvotePercentage,
+		Score:            Post.Score,
+		Views:            Post.Views,
+		Author:           Post.Author,
+	}
+
+	// fmt.Printf("%+v\n", Post)
+	result, _ := pp.Collection.InsertOne(context.TODO(), p)
 
 	fmt.Println("inserted id", result.InsertedID)
 	return Post, nil
@@ -195,18 +234,191 @@ func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post,
 
 }
 
-// yakovlev: add proper error handling
-func (pp *PostRepoMongo) Upvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+func (pp *PostRepoMongo) Upvote(ctx context.Context, PostID string) (*post.Post, error) {
+	userID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
+	// Convert postID to ObjectID
+	objID, err := bson.ObjectIDFromHex(PostID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid post ID: %w", err)
+	}
+	filter := bson.M{
+		"_id": objID,
+	}
 
-	return nil, errors.New("this id doesnot exist")
+	// Aggregation pipeline для обновления votes
+	update := bson.A{
+		bson.M{
+			"$set": bson.M{
+				"votes": bson.M{
+					"$cond": bson.M{
+						"if": bson.M{
+							"$in": []interface{}{userID, "$votes.user"},
+						},
+						"then": bson.M{
+							"$map": bson.M{
+								"input": "$votes",
+								"as":    "vote",
+								"in": bson.M{
+									"$cond": bson.M{
+										"if": bson.M{"$eq": []interface{}{"$$vote.user", userID}},
+										"then": bson.M{
+											"user": "$$vote.user",
+											"vote": 1,
+										},
+										"else": "$$vote",
+									},
+								},
+							},
+						},
+						"else": bson.M{
+							"$concatArrays": []interface{}{
+								"$votes",
+								[]bson.M{{
+									"user": userID,
+									"vote": 1,
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Опции для возврата обновлённого документа
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+
+	// Выполнение атомарного обновления
+	var tmpPost postTmp
+	err = pp.Collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&tmpPost)
+
+	ReturnedPost := tmpPost.ToPost()
+
+	if err == mongo.ErrNoDocuments {
+		return nil, fmt.Errorf("post with ID %s not found", PostID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to upvote post: %w", err)
+	}
+
+	return ReturnedPost, nil
 }
 
-func (pp *PostRepoMongo) Downvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+// yakovlev: this is almost full copy of Upvote, but lazy now
+func (pp *PostRepoMongo) Downvote(ctx context.Context, PostID string) (*post.Post, error) {
+	userID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
 
-	return nil, errors.New("this id doesnot exist")
+	// Convert postID to ObjectID
+	objID, err := bson.ObjectIDFromHex(PostID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid post ID: %w", err)
+	}
+	filter := bson.M{
+		"_id": objID,
+	}
+
+	// Aggregation pipeline для обновления votes
+	update := bson.A{
+		bson.M{
+			"$set": bson.M{
+				"votes": bson.M{
+					"$cond": bson.M{
+						"if": bson.M{
+							"$in": []interface{}{userID, "$votes.user"},
+						},
+						"then": bson.M{
+							"$map": bson.M{
+								"input": "$votes",
+								"as":    "vote",
+								"in": bson.M{
+									"$cond": bson.M{
+										"if": bson.M{"$eq": []interface{}{"$$vote.user", userID}},
+										"then": bson.M{
+											"user": "$$vote.user",
+											"vote": -1,
+										},
+										"else": "$$vote",
+									},
+								},
+							},
+						},
+						"else": bson.M{
+							"$concatArrays": []interface{}{
+								"$votes",
+								[]bson.M{{
+									"user": userID,
+									"vote": 1,
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Опции для возврата обновлённого документа
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+
+	// Выполнение атомарного обновления
+	var tmpPost postTmp
+	err = pp.Collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&tmpPost)
+
+	if err == mongo.ErrNoDocuments {
+		return nil, fmt.Errorf("post with ID %s not found", PostID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to upvote post: %w", err)
+	}
+
+	ReturnedPost := tmpPost.ToPost()
+
+	return ReturnedPost, nil
+
 }
 
-func (pp *PostRepoMongo) Unvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+func (pp *PostRepoMongo) Unvote(ctx context.Context, PostId string) (*post.Post, error) {
+	userID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
 
-	return nil, errors.New("this id doesnot exist")
+	objID, err := bson.ObjectIDFromHex(PostId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid post ID: %w", err)
+	}
+	filter := bson.M{
+		"_id": objID,
+	}
+
+	update := bson.M{
+		"$pull": bson.M{
+			"votes": bson.M{
+				"user": userID,
+			},
+		},
+	}
+
+	// Опции для возврата обновлённого документа
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+
+	var tmpPost postTmp
+	err = pp.Collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&tmpPost)
+
+	if err == mongo.ErrNoDocuments {
+		return nil, fmt.Errorf("post with ID %s not found", PostId)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to update post: %w", err)
+	}
+
+	ReturnedPost := tmpPost.ToPost()
+
+	return ReturnedPost, nil
 }

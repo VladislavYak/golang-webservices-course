@@ -4,8 +4,8 @@ import (
 	"github.com/VladislavYak/redditclone/pkg/handlers"
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
-	// "github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
 
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
 	jwt "github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -21,20 +21,18 @@ const (
 )
 
 func main() {
-	// cfg := mongodb.Config{
-	// 	URI:        "mongodb://localhost:27017",
-	// 	Database:   "testing",
-	// 	TimeoutSec: 2,
-	// }
+	cfg := mongodb.Config{
+		URI:        "mongodb://localhost:27017",
+		Database:   "testing",
+		TimeoutSec: 2,
+	}
 
-	// ram.NewPostRepo()
+	client, _ := mongodb.NewMongoClient(cfg)
+	PostRepo := mongodb.NewPostRepoMongo(client, "testing", "posts")
+	// PostRepo := ram.NewPostRepo()
 
-	// client, _ := mongodb.NewMongoClient(cfg)
-	// PostRepo := mongodb.NewPostRepoMongo(client, "testing", "posts")
-	PostRepo := ram.NewPostRepo()
-
-	CommentRepo := ram.NewCommentRepo()
-	// CommentRepo := mongodb.NewCommentRepoMongo(client, "testing", "posts")
+	// CommentRepo := ram.NewCommentRepo()
+	CommentRepo := mongodb.NewCommentRepoMongo(client, "testing", "posts")
 	UserRepo := ram.NewUserRepo()
 
 	PostImpl := application.NewPostImpl(PostRepo)

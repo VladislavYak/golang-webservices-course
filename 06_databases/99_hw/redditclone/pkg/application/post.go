@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	postP "github.com/VladislavYak/redditclone/pkg/domain/post"
@@ -87,36 +86,24 @@ func (p *PostImpl) GetByUsername(ctx context.Context, s string) ([]*postP.Post, 
 	return returnedPost, err
 }
 
+// fix updatescore
 func (p *PostImpl) Upvote(ctx context.Context, PostId string) (*postP.Post, error) {
-
-	UserID, ok := ctx.Value("UserID").(string)
-	if !ok {
-		return nil, errors.New("cannot cast userID to string")
-	}
-
-	returnedPost, err := p.repo.Upvote(ctx, PostId, UserID)
+	returnedPost, err := p.repo.Upvote(ctx, PostId)
 
 	return returnedPost, err
 }
 
+// fix updatescore
 func (p *PostImpl) Downvote(ctx context.Context, PostId string) (*postP.Post, error) {
-	UserID, ok := ctx.Value("UserID").(string)
-	if !ok {
-		return nil, errors.New("cannot cast userID to string")
-	}
 
-	returnedPost, err := p.repo.Downvote(ctx, PostId, UserID)
+	returnedPost, err := p.repo.Downvote(ctx, PostId)
 
 	return returnedPost, err
 }
 
+// fix updatescore
 func (p *PostImpl) Unvote(ctx context.Context, PostId string) (*postP.Post, error) {
-	UserID, ok := ctx.Value("UserID").(string)
-	if !ok {
-		return nil, errors.New("cannot cast userID to string")
-	}
-
-	returnedPost, err := p.repo.Unvote(ctx, PostId, UserID)
+	returnedPost, err := p.repo.Unvote(ctx, PostId)
 
 	return returnedPost, err
 }

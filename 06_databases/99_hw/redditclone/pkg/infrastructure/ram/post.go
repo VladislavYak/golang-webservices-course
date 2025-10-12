@@ -103,9 +103,14 @@ func (pp *PostRepo) DeletePost(ctx context.Context, Id string) (*post.Post, erro
 }
 
 // yakovlev: add proper error handling
-func (pp *PostRepo) Upvote(ctx context.Context, PostId string, UserId string) (*post.Post, error) {
+func (pp *PostRepo) Upvote(ctx context.Context, PostId string) (*post.Post, error) {
 	pp.Mutex.Lock()
 	defer pp.Mutex.Unlock()
+
+	UserId, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
 
 	for i, Post := range pp.Data {
 		if Post.Id == PostId {
@@ -127,12 +132,17 @@ func (pp *PostRepo) Upvote(ctx context.Context, PostId string, UserId string) (*
 		}
 	}
 
-	return nil, errors.New("this id doesnot exist")
+	return nil, errors.New("this PostId doesnot exist")
 }
 
-func (pp *PostRepo) Downvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+func (pp *PostRepo) Downvote(ctx context.Context, id string) (*post.Post, error) {
 	pp.Mutex.Lock()
 	defer pp.Mutex.Unlock()
+
+	UserId, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
 
 	for i, Post := range pp.Data {
 		if Post.Id == id {
@@ -157,9 +167,14 @@ func (pp *PostRepo) Downvote(ctx context.Context, id string, UserId string) (*po
 	return nil, errors.New("this id doesnot exist")
 }
 
-func (pp *PostRepo) Unvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+func (pp *PostRepo) Unvote(ctx context.Context, id string) (*post.Post, error) {
 	pp.Mutex.Lock()
 	defer pp.Mutex.Unlock()
+
+	UserId, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
 
 	for i, Post := range pp.Data {
 		if Post.Id == id {
