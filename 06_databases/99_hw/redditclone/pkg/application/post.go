@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	postP "github.com/VladislavYak/redditclone/pkg/domain/post"
@@ -17,6 +18,9 @@ type PostInterface interface {
 	GetByID(context.Context, string) (*postP.Post, error)
 	GetPostsByCategoryName(context.Context, string) ([]*postP.Post, error)
 	GetByUsername(context.Context, string) ([]*postP.Post, error)
+	Upvote(context.Context, string) (*postP.Post, error)
+	Downvote(context.Context, string) (*postP.Post, error)
+	Unvote(context.Context, string) (*postP.Post, error)
 }
 
 type PostImpl struct {
@@ -32,6 +36,8 @@ var _ PostInterface = new(PostImpl)
 
 func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, error) {
 	returnedPost, err := p.repo.AddPost(ctx, Post)
+
+	// как будто тут я хочу делать Upvote для своего поста. но тогда сюда надо параметры передатьва...
 
 	fmt.Println("returnedPost", returnedPost)
 
@@ -77,6 +83,40 @@ func (p *PostImpl) GetPostsByCategoryName(ctx context.Context, s string) ([]*pos
 func (p *PostImpl) GetByUsername(ctx context.Context, s string) ([]*postP.Post, error) {
 
 	returnedPost, err := p.repo.GetPostsByUsername(ctx, s)
+
+	return returnedPost, err
+}
+
+func (p *PostImpl) Upvote(ctx context.Context, PostId string) (*postP.Post, error) {
+
+	UserID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
+
+	returnedPost, err := p.repo.Upvote(ctx, PostId, UserID)
+
+	return returnedPost, err
+}
+
+func (p *PostImpl) Downvote(ctx context.Context, PostId string) (*postP.Post, error) {
+	UserID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
+
+	returnedPost, err := p.repo.Downvote(ctx, PostId, UserID)
+
+	return returnedPost, err
+}
+
+func (p *PostImpl) Unvote(ctx context.Context, PostId string) (*postP.Post, error) {
+	UserID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
+
+	returnedPost, err := p.repo.Unvote(ctx, PostId, UserID)
 
 	return returnedPost, err
 }

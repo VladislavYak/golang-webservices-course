@@ -194,3 +194,19 @@ func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post,
 	return nil, errors.New("this id doesnot exist")
 
 }
+
+// yakovlev: add proper error handling
+func (pp *PostRepoMongo) Upvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+
+	return nil, errors.New("this id doesnot exist")
+}
+
+func (pp *PostRepoMongo) Downvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+
+	return nil, errors.New("this id doesnot exist")
+}
+
+func (pp *PostRepoMongo) Unvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+
+	return nil, errors.New("this id doesnot exist")
+}

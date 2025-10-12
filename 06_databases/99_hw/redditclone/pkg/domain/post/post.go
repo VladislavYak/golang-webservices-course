@@ -65,6 +65,9 @@ type PostRepository interface {
 	AddPost(ctx context.Context, Post *Post) (*Post, error)
 	DeletePost(ctx context.Context, Id string) (*Post, error)
 	// Save(ctx context.Context, user *domain.User) error
+	Upvote(ctx context.Context, PostId string, UserId string) (*Post, error)
+	Downvote(ctx context.Context, Id string, UserId string) (*Post, error)
+	Unvote(ctx context.Context, Id string, UserId string) (*Post, error)
 }
 
 type Vote struct {

@@ -101,3 +101,80 @@ func (pp *PostRepo) DeletePost(ctx context.Context, Id string) (*post.Post, erro
 	return nil, errors.New("this id doesnot exist")
 
 }
+
+// yakovlev: add proper error handling
+func (pp *PostRepo) Upvote(ctx context.Context, PostId string, UserId string) (*post.Post, error) {
+	pp.Mutex.Lock()
+	defer pp.Mutex.Unlock()
+
+	for i, Post := range pp.Data {
+		if Post.Id == PostId {
+			for j, voteIter := range Post.Votes {
+				if voteIter.User == UserId {
+
+					pp.Data[i].Votes[j].WithVote(1)
+					pp.Data[i].UpdateScore()
+					return pp.Data[i], nil
+				}
+			}
+
+			pp.Data[i].Votes = append(pp.Data[i].Votes, post.Vote{User: UserId, VoteScore: 1})
+			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
+
+			pp.Data[i].UpdateScore()
+
+			return pp.Data[i], nil
+		}
+	}
+
+	return nil, errors.New("this id doesnot exist")
+}
+
+func (pp *PostRepo) Downvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+	pp.Mutex.Lock()
+	defer pp.Mutex.Unlock()
+
+	for i, Post := range pp.Data {
+		if Post.Id == id {
+			for j, voteIter := range Post.Votes {
+				if voteIter.User == UserId {
+
+					pp.Data[i].Votes[j].WithVote(-1)
+					pp.Data[i].UpdateScore()
+					return pp.Data[i], nil
+				}
+			}
+
+			pp.Data[i].Votes = append(pp.Data[i].Votes, post.Vote{User: UserId, VoteScore: -1})
+			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
+
+			pp.Data[i].UpdateScore()
+
+			return pp.Data[i], nil
+		}
+	}
+
+	return nil, errors.New("this id doesnot exist")
+}
+
+func (pp *PostRepo) Unvote(ctx context.Context, id string, UserId string) (*post.Post, error) {
+	pp.Mutex.Lock()
+	defer pp.Mutex.Unlock()
+
+	for i, Post := range pp.Data {
+		if Post.Id == id {
+			for j, voteIter := range Post.Votes {
+				if voteIter.User == UserId {
+
+					pp.Data[i].Votes = append(pp.Data[i].Votes[:j], pp.Data[i].Votes[j+1:]...)
+					pp.Data[i].UpdateScore()
+					return pp.Data[i], nil
+				}
+			}
+
+			return nil, errors.New("cannot find user for specified post")
+		}
+	}
+
+	return nil, errors.New("this id doesnot exist")
+}

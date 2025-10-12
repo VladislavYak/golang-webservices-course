@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
@@ -74,17 +75,26 @@ func (ph *PostHandler) GetPostByUsername(c echo.Context) error {
 }
 
 func (ph *PostHandler) PostPost(c echo.Context) error {
+
 	us := c.Get("user").(*jwt.Token)
+
+	// yakovlev: do this at middleware somehow
 	claims := us.Claims.(*JwtCustomClaims)
+
+	ctx := c.Request().Context()
+	ctx = context.WithValue(ctx, "username", claims.Name)
+	ctx = context.WithValue(ctx, "id", claims.Id)
 
 	pp := &PostParams{}
 	if err := c.Bind(pp); err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 	}
 
+	fmt.Println("username (handler)", ctx.Value("username"))
+	fmt.Println("UserID (handler)", ctx.Value("id"))
 	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, *user.NewUser(claims.Name).WithID(claims.Id))
 
-	postReturned, err := ph.Implementation.Create(context.TODO(), Post)
+	postReturned, err := ph.Implementation.Create(ctx, Post)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot add post")
 	}
@@ -104,83 +114,61 @@ func (ph *PostHandler) DeletePost(c echo.Context) error {
 	return c.JSON(http.StatusOK, deletedPost)
 }
 
-// func (ph *PostHandler) AddComment(c echo.Context) error {
-// 	us := c.Get("user").(*jwt.Token)
-// 	claims := us.Claims.(*JwtCustomClaims)
+func (ph *PostHandler) Upvote(c echo.Context) error {
+	PostId := c.Param("id")
 
-// 	id := c.Param("id")
+	us := c.Get("user").(*jwt.Token)
+	claims := us.Claims.(*JwtCustomClaims)
 
-// 	var body struct {
-// 		Comment string `json:"comment"`
-// 	}
+	ctx := c.Request().Context()
+	ctx = context.WithValue(ctx, "Username", claims.Name)
+	ctx = context.WithValue(ctx, "UserID", claims.Id)
 
-// 	fmt.Println("body", body)
+	returnedPost, err := ph.Implementation.Upvote(ctx, PostId)
 
-// 	if err := c.Bind(&body); err != nil {
-// 		return c.String(http.StatusBadRequest, err.Error())
-// 	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
 
-// 	Comment := post.NewComment(*user.NewUser(claims.Name).WithID(claims.Id), body.Comment)
+	return echo.NewHTTPError(http.StatusOK, returnedPost)
 
-// 	returnedPost, err := ph.Repo.AddComment(id, Comment)
-// 	if err != nil {
-// 		return echo.NewHTTPError(http.StatusBadRequest, err)
-// 	}
+}
 
-// 	return echo.NewHTTPError(http.StatusCreated, returnedPost)
-// }
+func (ph *PostHandler) Downvote(c echo.Context) error {
+	PostId := c.Param("id")
 
-// func (ph *PostHandler) DeleteComment(c echo.Context) error {
-// 	id := c.Param("id")
-// 	commentId := c.Param("commentId")
+	us := c.Get("user").(*jwt.Token)
+	claims := us.Claims.(*JwtCustomClaims)
 
-// 	returnedPost, err := ph.Repo.DeleteComment(id, commentId)
-// 	if err != nil {
-// 		return echo.NewHTTPError(http.StatusBadRequest, err)
-// 	}
-// 	return echo.NewHTTPError(http.StatusCreated, returnedPost)
-// }
+	ctx := c.Request().Context()
+	ctx = context.WithValue(ctx, "Username", claims.Name)
+	ctx = context.WithValue(ctx, "UserID", claims.Id)
 
-// func (ph *PostHandler) Upvote(c echo.Context) error {
-// 	id := c.Param("id")
-// 	us := c.Get("user").(*jwt.Token)
-// 	claims := us.Claims.(*JwtCustomClaims)
+	returnedPost, err := ph.Implementation.Downvote(ctx, PostId)
 
-// 	returnedPost, err := ph.Repo.Upvote(id, claims.Id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
 
-// 	if err != nil {
-// 		return echo.NewHTTPError(http.StatusBadRequest, err)
-// 	}
+	return echo.NewHTTPError(http.StatusOK, returnedPost)
+}
 
-// 	return echo.NewHTTPError(http.StatusOK, returnedPost)
+func (ph *PostHandler) Unvote(c echo.Context) error {
+	PostId := c.Param("id")
 
-// }
+	us := c.Get("user").(*jwt.Token)
+	claims := us.Claims.(*JwtCustomClaims)
 
-// func (ph *PostHandler) Downvote(c echo.Context) error {
-// 	id := c.Param("id")
-// 	us := c.Get("user").(*jwt.Token)
-// 	claims := us.Claims.(*JwtCustomClaims)
+	ctx := c.Request().Context()
+	ctx = context.WithValue(ctx, "Username", claims.Name)
+	ctx = context.WithValue(ctx, "UserID", claims.Id)
 
-// 	returnedPost, err := ph.Repo.Downvote(id, claims.Id)
+	returnedPost, err := ph.Implementation.Unvote(ctx, PostId)
 
-// 	if err != nil {
-// 		return echo.NewHTTPError(http.StatusBadRequest, err)
-// 	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
 
-// 	return echo.NewHTTPError(http.StatusOK, returnedPost)
-// }
+	return echo.NewHTTPError(http.StatusOK, returnedPost)
 
-// func (ph *PostHandler) Unvote(c echo.Context) error {
-// 	id := c.Param("id")
-// 	us := c.Get("user").(*jwt.Token)
-// 	claims := us.Claims.(*JwtCustomClaims)
-
-// 	returnedPost, err := ph.Repo.Unvote(id, claims.Id)
-
-// 	if err != nil {
-// 		return echo.NewHTTPError(http.StatusBadRequest, err)
-// 	}
-
-// 	return echo.NewHTTPError(http.StatusOK, returnedPost)
-
-// }
+}
