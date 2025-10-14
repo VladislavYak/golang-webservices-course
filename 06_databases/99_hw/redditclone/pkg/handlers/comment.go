@@ -8,6 +8,7 @@ import (
 	"github.com/VladislavYak/redditclone/pkg/application"
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -18,7 +19,7 @@ type CommentHandler struct {
 
 func (ch *CommentHandler) AddComment(c echo.Context) error {
 	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*JwtCustomClaims)
+	claims := us.Claims.(*auth.JwtCustomClaims)
 
 	id := c.Param("id")
 
@@ -35,7 +36,7 @@ func (ch *CommentHandler) AddComment(c echo.Context) error {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	Comment := comment.NewComment(*user.NewUser(claims.Name).WithID(claims.Id), body.Comment)
+	Comment := comment.NewComment(*user.NewUser(claims.Login).WithID(claims.UserID), body.Comment)
 
 	returnedPost, err := ch.Implementation.AddComment(context.TODO(), id, Comment)
 	if err != nil {

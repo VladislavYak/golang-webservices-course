@@ -8,6 +8,7 @@ import (
 	"github.com/VladislavYak/redditclone/pkg/application"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -79,11 +80,11 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 	us := c.Get("user").(*jwt.Token)
 
 	// yakovlev: do this at middleware somehow
-	claims := us.Claims.(*JwtCustomClaims)
+	claims := us.Claims.(*auth.JwtCustomClaims)
 
 	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "username", claims.Name)
-	ctx = context.WithValue(ctx, "id", claims.Id)
+	ctx = context.WithValue(ctx, "username", claims.Login)
+	ctx = context.WithValue(ctx, "id", claims.UserID)
 
 	pp := &PostParams{}
 	if err := c.Bind(pp); err != nil {
@@ -92,7 +93,7 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 
 	fmt.Println("username (handler)", ctx.Value("username"))
 	fmt.Println("UserID (handler)", ctx.Value("id"))
-	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, *user.NewUser(claims.Name).WithID(claims.Id))
+	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, *user.NewUser(claims.Login).WithID(claims.UserID))
 
 	postReturned, err := ph.Implementation.Create(ctx, Post)
 	if err != nil {
@@ -118,11 +119,11 @@ func (ph *PostHandler) Upvote(c echo.Context) error {
 	PostId := c.Param("id")
 
 	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*JwtCustomClaims)
+	claims := us.Claims.(*auth.JwtCustomClaims)
 
 	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "Username", claims.Name)
-	ctx = context.WithValue(ctx, "UserID", claims.Id)
+	ctx = context.WithValue(ctx, "Username", claims.Login)
+	ctx = context.WithValue(ctx, "UserID", claims.UserID)
 
 	returnedPost, err := ph.Implementation.Upvote(ctx, PostId)
 
@@ -138,11 +139,11 @@ func (ph *PostHandler) Downvote(c echo.Context) error {
 	PostId := c.Param("id")
 
 	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*JwtCustomClaims)
+	claims := us.Claims.(*auth.JwtCustomClaims)
 
 	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "Username", claims.Name)
-	ctx = context.WithValue(ctx, "UserID", claims.Id)
+	ctx = context.WithValue(ctx, "Username", claims.Login)
+	ctx = context.WithValue(ctx, "UserID", claims.UserID)
 
 	returnedPost, err := ph.Implementation.Downvote(ctx, PostId)
 
@@ -157,11 +158,11 @@ func (ph *PostHandler) Unvote(c echo.Context) error {
 	PostId := c.Param("id")
 
 	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*JwtCustomClaims)
+	claims := us.Claims.(*auth.JwtCustomClaims)
 
 	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "Username", claims.Name)
-	ctx = context.WithValue(ctx, "UserID", claims.Id)
+	ctx = context.WithValue(ctx, "Username", claims.Login)
+	ctx = context.WithValue(ctx, "UserID", claims.UserID)
 
 	returnedPost, err := ph.Implementation.Unvote(ctx, PostId)
 

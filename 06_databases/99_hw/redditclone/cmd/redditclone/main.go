@@ -5,6 +5,7 @@ import (
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
 
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -28,21 +29,25 @@ func main() {
 	}
 
 	client, _ := mongodb.NewMongoClient(cfg)
+	// pgPool, _ := postgres.NewPgPool()
+
+	// UserRepo := postgres.NewUserRepoPostgres(pgPool)
+	UserRepo := ram.NewUserRepo()
 	PostRepo := mongodb.NewPostRepoMongo(client, "testing", "posts")
 	// PostRepo := ram.NewPostRepo()
 
-	// CommentRepo := ram.NewCommentRepo()
 	CommentRepo := mongodb.NewCommentRepoMongo(client, "testing", "posts")
-	UserRepo := ram.NewUserRepo()
+	// CommentRepo := ram.NewCommentRepo()
 
 	PostImpl := application.NewPostImpl(PostRepo)
 	CommentImpl := application.NewCommentImpl(PostRepo, CommentRepo)
+	UserImpl := application.NewUserImpl(UserRepo)
 
 	postHandler := handlers.PostHandler{Implementation: PostImpl}
 	commentHandler := handlers.CommentHandler{Implementation: CommentImpl}
 
-	registerHandler := handlers.RegisterHandler{UserRepo: *UserRepo}
-	loginHandler := handlers.LoginHandler{UserRepo: *UserRepo}
+	userHandler := handlers.UserHandler{Impl: UserImpl}
+	// loginHandler := handlers.LoginHandler{UserRepo: *UserRepo}
 
 	e := echo.New()
 
@@ -56,8 +61,8 @@ func main() {
 	// e.Static("/", "static/html") // Отдаем HTML файлы по корневому маршруту
 	e.File("/", "static/html/index.html")
 
-	g.POST("/register", registerHandler.Register)
-	g.POST("/login", loginHandler.Login)
+	g.POST("/register", userHandler.Register)
+	g.POST("/login", userHandler.Login)
 	g.GET("/posts", postHandler.GetPosts)
 	g.GET("/posts/:CategoryName", postHandler.GetPostsByCategoryName)
 	g.GET("/post/:id", postHandler.GetPostByID)
@@ -67,7 +72,7 @@ func main() {
 	{
 		config := echojwt.Config{
 			NewClaimsFunc: func(c echo.Context) jwt.Claims {
-				return new(handlers.JwtCustomClaims)
+				return new(auth.JwtCustomClaims)
 			},
 			SigningKey: []byte("secret"),
 		}

@@ -1,6 +1,7 @@
 package ram
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
 )
+
+var _ user.UserRepository = new(UserRepo)
 
 type UserRepo struct {
 	Users *[]user.User
@@ -23,25 +26,25 @@ func NewUserRepo() *UserRepo {
 	}
 }
 
-func (ur *UserRepo) AddUser(user *user.User) (string, error) {
+func (ur *UserRepo) Create(ctx context.Context, User *user.User) (*user.User, error) {
 	ur.Mutex.Lock()
 	defer ur.Mutex.Unlock()
 
 	fmt.Println("ur.Users AddUser", ur.Users)
-	if ur.isUserExists(user) {
-		return "", errors.New("this user already exists")
+	if ur.isUserExists(User) {
+		return nil, errors.New("this user already exists")
 	}
 
 	idStr := strconv.Itoa(ur.lastID)
 
-	user = user.WithID(idStr)
+	User = User.WithID(idStr)
 
 	ur.lastID++
 
-	*ur.Users = append(*ur.Users, *user)
+	*ur.Users = append(*ur.Users, *User)
 
 	fmt.Println("users", ur.Users)
-	return idStr, nil
+	return User, nil
 
 }
 
@@ -57,7 +60,7 @@ func (ur *UserRepo) isUserExists(user *user.User) bool {
 	return false
 }
 
-func (ur *UserRepo) GetUser(user *user.User) (*user.User, error) {
+func (ur *UserRepo) GetUser(ctx context.Context, user *user.User) (*user.User, error) {
 	fmt.Println("inside GetUser, before loop")
 	fmt.Printf("in use %+v\n", user)
 	fmt.Printf("ur.Users %+v\n", ur.Users)

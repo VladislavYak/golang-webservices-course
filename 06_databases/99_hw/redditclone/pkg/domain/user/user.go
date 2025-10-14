@@ -1,8 +1,10 @@
 package user
 
+import "context"
+
 type User struct {
 	Username string `json:"username"`
-	password string
+	Password string
 	UserID   string `json:"id"`
 }
 
@@ -16,10 +18,15 @@ func (u *User) WithID(Id string) *User {
 }
 
 func (u *User) WithPassword(Password string) *User {
-	u.password = Password
+	u.Password = Password
 	return u
 }
 
 func (u *User) GetPassword() string {
-	return u.password
+	return u.Password
+}
+
+type UserRepository interface {
+	Create(ctx context.Context, user *User) (*User, error)
+	GetUser(ctx context.Context, user *User) (*User, error)
 }
