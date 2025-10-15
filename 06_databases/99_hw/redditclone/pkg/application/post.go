@@ -34,6 +34,7 @@ func NewPostImpl(repo postP.PostRepository) *PostImpl {
 var _ PostInterface = new(PostImpl)
 
 func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, error) {
+	fmt.Println("inside create")
 	returnedPost, err := p.repo.AddPost(ctx, Post)
 
 	// как будто тут я хочу делать Upvote для своего поста. но тогда сюда надо параметры передатьва...

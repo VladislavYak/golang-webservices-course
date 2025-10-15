@@ -10,7 +10,11 @@ type JwtCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateJWTToken(claims *JwtCustomClaims, secret string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secret))
+func GenerateJWTToken(Claims *JwtCustomClaims, Secret string) (string, error) {
+	// yakovlev: temp hardcoding
+
+	Secret = "secret"
+
+	Token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims)
+	return Token.SignedString([]byte(Secret))
 }

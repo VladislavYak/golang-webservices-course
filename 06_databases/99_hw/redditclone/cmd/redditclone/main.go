@@ -1,13 +1,15 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/VladislavYak/redditclone/pkg/handlers"
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
 
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/ram"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/postgres"
 	jwt "github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -29,10 +31,10 @@ func main() {
 	}
 
 	client, _ := mongodb.NewMongoClient(cfg)
-	// pgPool, _ := postgres.NewPgPool()
+	pgPool, _ := postgres.NewPgPool()
 
-	// UserRepo := postgres.NewUserRepoPostgres(pgPool)
-	UserRepo := ram.NewUserRepo()
+	UserRepo := postgres.NewUserRepoPostgres(pgPool)
+	// UserRepo := ram.NewUserRepo()
 	PostRepo := mongodb.NewPostRepoMongo(client, "testing", "posts")
 	// PostRepo := ram.NewPostRepo()
 
@@ -76,6 +78,8 @@ func main() {
 			},
 			SigningKey: []byte("secret"),
 		}
+
+		fmt.Println("config", config)
 		g.Use(echojwt.WithConfig(config))
 
 		g.POST("/posts", postHandler.PostPost)
