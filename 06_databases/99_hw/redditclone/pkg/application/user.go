@@ -53,10 +53,10 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 	//     return "", echo.NewHTTPError(http.StatusBadRequest, "user with this login already exists")
 	// }
 
-	u := user.NewUser(Login).WithPassword(Password)
+	u := user.NewUser(Login)
 
 	fmt.Println("before ui.ur.Cerate")
-	u, err := ui.ur.Create(ctx, u)
+	u, err := ui.ur.Create(ctx, u, Password)
 	if err != nil {
 		return "", err
 	}
@@ -79,12 +79,17 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 
 func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, error) {
 
-	User, err := ui.ur.GetUser(ctx, user.NewUser(Login).WithPassword(Password))
+	User, err := ui.ur.GetUser(ctx, user.NewUser(Login))
 	if err != nil {
 		return "", err
 	}
 
-	if User.GetPassword() != Password {
+	actualPass, err := ui.ur.GetUserPassword(ctx, User)
+	if err != nil {
+		return "", err
+	}
+
+	if actualPass != Password {
 		return "", errors.New("invalid password")
 	}
 

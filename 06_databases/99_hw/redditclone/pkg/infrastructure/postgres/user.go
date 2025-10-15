@@ -25,7 +25,7 @@ func (r *UserRepoPostgres) GetUser(ctx context.Context, User *user.User) (*user.
 	// также я должен проверять не протухла ли она (поле expires_at)
 	var u user.User
 	err := r.Pool.QueryRow(ctx, "SELECT id, login, password FROM users WHERE login = $1", User.Username).
-		Scan(&u.UserID, &u.Username, &u.Password)
+		Scan(&u.UserID, &u.Username)
 	if err == pgx.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
@@ -35,13 +35,25 @@ func (r *UserRepoPostgres) GetUser(ctx context.Context, User *user.User) (*user.
 	return &u, nil
 }
 
-func (r *UserRepoPostgres) Create(ctx context.Context, user *user.User) (*user.User, error) {
+func (r *UserRepoPostgres) Create(ctx context.Context, User *user.User, Password string) (*user.User, error) {
 	err := r.Pool.QueryRow(ctx,
 		"INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id",
-		user.Username, user.Password,
-	).Scan(&user.UserID)
+		User.Username, Password,
+	).Scan(&User.UserID)
 	if err != nil {
 		return nil, err
 	}
-	return user, nil
+	return User, nil
+}
+
+func (r *UserRepoPostgres) GetUserPassword(ctx context.Context, user *user.User) (string, error) {
+	var Password string
+	err := r.Pool.QueryRow(ctx, "select password from users where username = $1", user.Username).Scan(Password)
+	if err == pgx.ErrNoRows {
+		return "", errors.New("user not found")
+	}
+	if err != nil {
+		return "", err
+	}
+	return Password, nil
 }

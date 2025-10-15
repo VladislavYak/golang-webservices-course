@@ -26,7 +26,7 @@ func NewUserRepo() *UserRepo {
 	}
 }
 
-func (ur *UserRepo) Create(ctx context.Context, User *user.User) (*user.User, error) {
+func (ur *UserRepo) Create(ctx context.Context, User *user.User, Password string) (*user.User, error) {
 	ur.Mutex.Lock()
 	defer ur.Mutex.Unlock()
 
@@ -75,4 +75,8 @@ func (ur *UserRepo) GetUser(ctx context.Context, user *user.User) (*user.User, e
 	fmt.Println("inside GetUser after loop")
 
 	return nil, errors.New("user not found")
+}
+
+func (ur *UserRepo) GetUserPassword(ctx context.Context, user *user.User) (string, error) {
+	return "", nil
 }
