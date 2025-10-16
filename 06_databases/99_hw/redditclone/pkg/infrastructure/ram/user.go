@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 )
 
 var _ user.UserRepository = new(UserRepo)
@@ -79,4 +80,8 @@ func (ur *UserRepo) GetUser(ctx context.Context, user *user.User) (*user.User, e
 
 func (ur *UserRepo) GetUserPassword(ctx context.Context, user *user.User) (string, error) {
 	return "", nil
+}
+
+func (r *UserRepo) AddJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
+	return nil
 }

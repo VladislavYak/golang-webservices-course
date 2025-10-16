@@ -49,6 +49,7 @@ func NewUserImpl(repo user.UserRepository) *UserImpl {
 func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (string, error) {
 
 	// yakovlev: это нужно как-то добавить
+	// ui.ur.GetUser(ctx, User)
 	// if _, err := ui.ur.GetUser(ctx, User); err == nil {
 	//     return "", echo.NewHTTPError(http.StatusBadRequest, "user with this login already exists")
 	// }
@@ -61,20 +62,29 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 		return "", err
 	}
 
+	issuedAt := time.Now()
+	expiresAt := issuedAt.Add(15 * time.Minute) // Shortened lifetime for security
+
 	// Генерируем JWT
-	claims := &auth.JwtCustomClaims{
+	Claims := &auth.JwtCustomClaims{
 		Login:  Login,
 		UserID: u.UserID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
+			IssuedAt:  jwt.NewNumericDate(issuedAt),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
 		},
 	}
-	token, err := auth.GenerateJWTToken(claims, ui.JWTSecret)
+	Token, err := auth.GenerateJWTToken(Claims, ui.JWTSecret)
+
 	if err != nil {
 		return "", errors.New("failed to generate token")
 	}
 
-	return token, nil
+	if err = ui.ur.AddJWT(ctx, Token, Claims); err != nil {
+		return "", err
+	}
+
+	return Token, nil
 }
 
 func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, error) {

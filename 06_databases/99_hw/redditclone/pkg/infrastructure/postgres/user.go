@@ -4,8 +4,10 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
+	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -38,6 +40,7 @@ func (r *UserRepoPostgres) GetUser(ctx context.Context, User *user.User) (*user.
 }
 
 func (r *UserRepoPostgres) Create(ctx context.Context, User *user.User, Password string) (*user.User, error) {
+	fmt.Println("before insertion Create")
 	err := r.Pool.QueryRow(ctx,
 		"INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id",
 		User.Username, Password,
@@ -59,3 +62,25 @@ func (r *UserRepoPostgres) GetUserPassword(ctx context.Context, user *user.User)
 	}
 	return Password, nil
 }
+
+func (r *UserRepoPostgres) AddJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
+	fmt.Println("before Add JWT")
+
+	fmt.Println("")
+	_, err := r.Pool.Exec(ctx,
+		"INSERT INTO sessions (user_id, token, issued_at, expires_at) VALUES ($1, $2, $3, $4)",
+		Claims.UserID, Token, Claims.IssuedAt.Time, Claims.ExpiresAt.Time,
+	)
+
+	fmt.Println("errrrrr", err)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// INSERT INTO sessions (user_id, token, issued_at, expires_at) VALUES
+// (1, 'sample_jwt_token_1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour'),
+// (2, 'sample_jwt_token_2', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour');
