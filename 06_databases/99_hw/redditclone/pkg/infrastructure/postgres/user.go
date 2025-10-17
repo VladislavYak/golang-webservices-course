@@ -84,3 +84,7 @@ func (r *UserRepoPostgres) AddJWT(ctx context.Context, Token string, Claims *aut
 // INSERT INTO sessions (user_id, token, issued_at, expires_at) VALUES
 // (1, 'sample_jwt_token_1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour'),
 // (2, 'sample_jwt_token_2', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour');
+
+func (r *UserRepoPostgres) ValidateJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
+	return nil
+}

@@ -85,3 +85,7 @@ func (ur *UserRepo) GetUserPassword(ctx context.Context, user *user.User) (strin
 func (r *UserRepo) AddJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
 	return nil
 }
+
+func (r *UserRepo) ValidateJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
+	return nil
+}

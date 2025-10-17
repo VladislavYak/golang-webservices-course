@@ -80,7 +80,14 @@ func main() {
 		}
 
 		fmt.Println("config", config)
-		g.Use(echojwt.WithConfig(config))
+
+		// в общем кажется, что надо откащываться от этой withConfig и писать свою мидлварь для авторизации где есть проверка на валидность токена в бд
+		basicAuthMiddleware := echojwt.WithConfig(config)
+
+		// где-то тут, наверное, мне нужна мидллаварь, которая ходит в базу и проверяет валидность токена.
+		// но еще я делаб одинаковые операции с Claims. Вот их бы тоже унести куда-то.
+		// эти операции делать надо после проверки мидлвар.
+		g.Use(basicAuthMiddleware)
 
 		g.POST("/posts", postHandler.PostPost)
 		g.DELETE("/post/:id", postHandler.DeletePost)

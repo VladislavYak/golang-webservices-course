@@ -79,6 +79,8 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 
 	us := c.Get("user").(*jwt.Token)
 
+	fmt.Println("us.Raw (this is token?)", us.Raw)
+
 	// yakovlev: do this at middleware somehow
 	claims := us.Claims.(*auth.JwtCustomClaims)
 

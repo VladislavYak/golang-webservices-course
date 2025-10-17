@@ -35,4 +35,5 @@ type UserRepository interface {
 	GetUser(ctx context.Context, User *User) (*User, error)
 	GetUserPassword(ctx context.Context, user *User) (string, error)
 	AddJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error
+	ValidateJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error
 }
