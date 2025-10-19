@@ -32,6 +32,7 @@ type JwtCustomClaims struct {
 type UserInterface interface {
 	Login(ctx context.Context, Login, Password string) (string, error)
 	Register(ctx context.Context, Login, Password string) (string, error)
+	ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error
 }
 
 var _ UserInterface = new(UserImpl)
@@ -80,7 +81,7 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 		return "", errors.New("failed to generate token")
 	}
 
-	if err = ui.ur.AddJWT(ctx, Token, Claims); err != nil {
+	if err = ui.ur.AddJWT(ctx, Token, Claims.UserID, Claims.IssuedAt.Time, Claims.ExpiresAt.Time); err != nil {
 		return "", err
 	}
 
@@ -114,4 +115,10 @@ func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, 
 
 	return token, nil
 
+}
+
+func (ui *UserImpl) ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error {
+	err := ui.ur.ValidateJWT(ctx, Token, ExpiresAt)
+
+	return err
 }

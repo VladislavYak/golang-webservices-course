@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 )
 
 var _ user.UserRepository = new(UserRepo)
@@ -82,10 +82,10 @@ func (ur *UserRepo) GetUserPassword(ctx context.Context, user *user.User) (strin
 	return "", nil
 }
 
-func (r *UserRepo) AddJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
+func (r *UserRepo) AddJWT(context.Context, string, string, time.Time, time.Time) error {
 	return nil
 }
 
-func (r *UserRepo) ValidateJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
+func (r *UserRepo) ValidateJWT(ctx context.Context, Token string, expiredAt time.Time) error {
 	return nil
 }

@@ -2,8 +2,7 @@ package user
 
 import (
 	"context"
-
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
+	"time"
 )
 
 type User struct {
@@ -34,6 +33,6 @@ type UserRepository interface {
 	Create(ctx context.Context, User *User, Password string) (*User, error)
 	GetUser(ctx context.Context, User *User) (*User, error)
 	GetUserPassword(ctx context.Context, user *User) (string, error)
-	AddJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error
-	ValidateJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error
+	AddJWT(ctx context.Context, Token string, UserID string, IssuedAt time.Time, ExpiresAt time.Time) error
+	ValidateJWT(ctx context.Context, Token string, ExpiresAt time.Time) error
 }

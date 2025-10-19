@@ -5,9 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -63,13 +63,13 @@ func (r *UserRepoPostgres) GetUserPassword(ctx context.Context, user *user.User)
 	return Password, nil
 }
 
-func (r *UserRepoPostgres) AddJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
+func (r *UserRepoPostgres) AddJWT(ctx context.Context, Token string, UserID string, IssuedAt time.Time, ExpiresAt time.Time) error {
 	fmt.Println("before Add JWT")
 
 	fmt.Println("")
 	_, err := r.Pool.Exec(ctx,
 		"INSERT INTO sessions (user_id, token, issued_at, expires_at) VALUES ($1, $2, $3, $4)",
-		Claims.UserID, Token, Claims.IssuedAt.Time, Claims.ExpiresAt.Time,
+		UserID, Token, IssuedAt, ExpiresAt,
 	)
 
 	fmt.Println("errrrrr", err)
@@ -85,6 +85,23 @@ func (r *UserRepoPostgres) AddJWT(ctx context.Context, Token string, Claims *aut
 // (1, 'sample_jwt_token_1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour'),
 // (2, 'sample_jwt_token_2', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour');
 
-func (r *UserRepoPostgres) ValidateJWT(ctx context.Context, Token string, Claims *auth.JwtCustomClaims) error {
+func (r *UserRepoPostgres) ValidateJWT(ctx context.Context, Token string, ExpiresAt time.Time) error {
+	fmt.Println("inside ValidateJWT")
+	var expiresAt time.Time
+	err := r.Pool.QueryRow(ctx, "select expires_at from sessions where token = $1", Token).Scan(&expiresAt)
+
+	if err == pgx.ErrNoRows {
+		return errors.New("token not found")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("я тут")
+
+	if expiresAt.Before(time.Now()) {
+		return errors.New("token expired")
+	}
 	return nil
 }

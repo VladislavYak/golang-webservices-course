@@ -7,6 +7,7 @@ import (
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
 
+	customMiddleware "github.com/VladislavYak/redditclone/pkg/handlers/middleware"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/postgres"
@@ -81,13 +82,14 @@ func main() {
 
 		fmt.Println("config", config)
 
+		g.Use(customMiddleware.CustomAuth(&config, UserImpl))
 		// в общем кажется, что надо откащываться от этой withConfig и писать свою мидлварь для авторизации где есть проверка на валидность токена в бд
-		basicAuthMiddleware := echojwt.WithConfig(config)
+		// basicAuthMiddleware := echojwt.WithConfig(config)
 
 		// где-то тут, наверное, мне нужна мидллаварь, которая ходит в базу и проверяет валидность токена.
 		// но еще я делаб одинаковые операции с Claims. Вот их бы тоже унести куда-то.
 		// эти операции делать надо после проверки мидлвар.
-		g.Use(basicAuthMiddleware)
+		// g.Use(basicAuthMiddleware)
 
 		g.POST("/posts", postHandler.PostPost)
 		g.DELETE("/post/:id", postHandler.DeletePost)
