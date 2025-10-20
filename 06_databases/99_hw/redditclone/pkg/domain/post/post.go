@@ -70,6 +70,8 @@ type PostRepository interface {
 	Upvote(ctx context.Context, PostId string) (*Post, error)
 	Downvote(ctx context.Context, Id string) (*Post, error)
 	Unvote(ctx context.Context, Id string) (*Post, error)
+	// yakovlev: надо добавить UpdateScore - штука, которая
+	UpdateScore(ct context.Context, Id string) (*Post, error)
 }
 
 type Vote struct {

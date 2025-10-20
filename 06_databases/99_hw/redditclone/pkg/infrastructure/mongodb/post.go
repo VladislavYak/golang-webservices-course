@@ -2,13 +2,13 @@ package mongodb
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
+	"github.com/go-faster/errors"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -66,18 +66,18 @@ func (pt *postTmp) ToPost() *post.Post {
 }
 
 func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) {
+	const op = "GetAllPosts"
 	fmt.Println("inside GetAllPosts")
 	cursor, err := pp.Collection.Find(context.TODO(), bson.D{})
 
 	if err != nil {
-		fmt.Println("я в курсоре")
-		panic(err)
+		return nil, errors.Wrap(err, op)
 	}
 
 	var postsTmp []*postTmp
 
 	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, op)
 	}
 
 	var Posts []*post.Post
@@ -91,15 +91,16 @@ func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) 
 }
 
 func (pp *PostRepoMongo) GetPostsByCategoryName(ctx context.Context, CategoryName string) ([]*post.Post, error) {
+	const op = "GetPostsByCategoryName"
 	cursor, err := pp.Collection.Find(context.TODO(), bson.D{{Key: "category", Value: CategoryName}})
 
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, op)
 	}
 
 	var postsTmp []*postTmp
 	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, op)
 	}
 
 	var Posts []*post.Post
@@ -112,6 +113,7 @@ func (pp *PostRepoMongo) GetPostsByCategoryName(ctx context.Context, CategoryNam
 }
 
 func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post, error) {
+	const op = "GetPostByID"
 	value, _ := bson.ObjectIDFromHex(ID)
 
 	fmt.Println("GetPostByID, value", value)
@@ -120,14 +122,13 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 
 	var postTmp *postTmp
 	err := pp.Collection.FindOne(context.TODO(), filter).Decode(&postTmp)
+	if err != nil {
+		return nil, errors.Wrap(err, op)
+	}
 
 	fmt.Printf("Updated Post:\n%+v\n", postTmp)
 
 	Post := postTmp.ToPost()
-
-	if err != nil {
-		panic(err)
-	}
 
 	fmt.Println("Post GetPostByID", Post)
 
@@ -180,22 +181,7 @@ func (pp *PostRepoMongo) UpdatePostViews(ID string) error {
 }
 
 func (pp *PostRepoMongo) AddPost(ctx context.Context, Post *post.Post) (*post.Post, error) {
-
-	type postTmp struct {
-		ObjectID         bson.ObjectID     `bson:"_id,omitempty"`
-		Category         string            `json:"category"`
-		Type             string            `json:"type"`
-		Url              string            `json:"url,omitempty"`
-		Text             string            `json:"text,omitempty"`
-		Title            string            `json:"title"`
-		Votes            []post.Vote       `json:"votes"`
-		Comments         []comment.Comment `json:"comments"`
-		Created          time.Time         `json:"created"`
-		UpvotePercentage int               `json:"upvotePercentage"`
-		Score            int               `json:"score"`
-		Views            int               `json:"views"`
-		Author           user.User         `json:"author"`
-	}
+	const op = "AddPost"
 
 	// prettify it somehow
 	p := &postTmp{
@@ -214,27 +200,50 @@ func (pp *PostRepoMongo) AddPost(ctx context.Context, Post *post.Post) (*post.Po
 		Author:           Post.Author,
 	}
 
-	// fmt.Printf("%+v\n", Post)
-	result, _ := pp.Collection.InsertOne(context.TODO(), p)
+	result, err := pp.Collection.InsertOne(context.TODO(), p)
+	if err != nil {
+		return nil, errors.Wrap(err, op)
+	}
 
+	ReturnedPost := p.ToPost()
+
+	if objID, ok := result.InsertedID.(bson.ObjectID); ok {
+		// Преобразуем ObjectID в строку (hex-формат)
+		IdConverted := objID.Hex()
+		ReturnedPost.Id = IdConverted
+	} else {
+		return nil, errors.New("cannot convert id")
+	}
+
+	fmt.Println("ReturnedPost (AddPost)", ReturnedPost.Id)
+
+	// yakovlev: logging?
 	fmt.Println("inserted id", result.InsertedID)
-	return Post, nil
+	return ReturnedPost, nil
 }
 
 func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post, error) {
+	const op = "DeletePost"
 
-	value, _ := bson.ObjectIDFromHex(Id)
-
-	_, err := pp.Collection.DeleteOne(context.TODO(), bson.D{{"_id", value}})
+	value, err := bson.ObjectIDFromHex(Id)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, op)
 	}
 
-	return nil, errors.New("this id doesnot exist")
+	_, err = pp.Collection.DeleteOne(context.TODO(), bson.D{{"_id", value}})
+	if err != nil {
+		return nil, errors.Wrap(err, op)
+	}
+
+	// yakovlev: check this out
+	return nil, nil
+
+	// return nil, errors.New("this id doesnot exist")
 
 }
 
 func (pp *PostRepoMongo) Upvote(ctx context.Context, PostID string) (*post.Post, error) {
+	const op = "Upvote"
 	userID, ok := ctx.Value("UserID").(string)
 	if !ok {
 		return nil, errors.New("cannot cast userID to string")
@@ -242,7 +251,7 @@ func (pp *PostRepoMongo) Upvote(ctx context.Context, PostID string) (*post.Post,
 	// Convert postID to ObjectID
 	objID, err := bson.ObjectIDFromHex(PostID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid post ID: %w", err)
+		return nil, errors.Wrap(err, op)
 	}
 	filter := bson.M{
 		"_id": objID,
@@ -301,7 +310,7 @@ func (pp *PostRepoMongo) Upvote(ctx context.Context, PostID string) (*post.Post,
 		return nil, fmt.Errorf("post with ID %s not found", PostID)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to upvote post: %w", err)
+		return nil, errors.Wrap(err, op)
 	}
 
 	return ReturnedPost, nil
@@ -309,6 +318,7 @@ func (pp *PostRepoMongo) Upvote(ctx context.Context, PostID string) (*post.Post,
 
 // yakovlev: this is almost full copy of Upvote, but lazy now
 func (pp *PostRepoMongo) Downvote(ctx context.Context, PostID string) (*post.Post, error) {
+	const op = "Downvote"
 	userID, ok := ctx.Value("UserID").(string)
 	if !ok {
 		return nil, errors.New("cannot cast userID to string")
@@ -317,7 +327,7 @@ func (pp *PostRepoMongo) Downvote(ctx context.Context, PostID string) (*post.Pos
 	// Convert postID to ObjectID
 	objID, err := bson.ObjectIDFromHex(PostID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid post ID: %w", err)
+		return nil, errors.Wrap(err, op)
 	}
 	filter := bson.M{
 		"_id": objID,
@@ -374,7 +384,7 @@ func (pp *PostRepoMongo) Downvote(ctx context.Context, PostID string) (*post.Pos
 		return nil, fmt.Errorf("post with ID %s not found", PostID)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to upvote post: %w", err)
+		return nil, errors.Wrap(err, op)
 	}
 
 	ReturnedPost := tmpPost.ToPost()
@@ -384,6 +394,7 @@ func (pp *PostRepoMongo) Downvote(ctx context.Context, PostID string) (*post.Pos
 }
 
 func (pp *PostRepoMongo) Unvote(ctx context.Context, PostId string) (*post.Post, error) {
+	const op = "Unvote"
 	userID, ok := ctx.Value("UserID").(string)
 	if !ok {
 		return nil, errors.New("cannot cast userID to string")
@@ -415,10 +426,50 @@ func (pp *PostRepoMongo) Unvote(ctx context.Context, PostId string) (*post.Post,
 		return nil, fmt.Errorf("post with ID %s not found", PostId)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to update post: %w", err)
+		return nil, errors.Wrap(err, op)
 	}
 
 	ReturnedPost := tmpPost.ToPost()
 
+	return ReturnedPost, nil
+}
+
+// UpdateScore calculates the sum of votes.vote and updates the score field
+func (pp *PostRepoMongo) UpdateScore(ctx context.Context, PostId string) (*post.Post, error) {
+	const op = "UpdateScore"
+
+	// Convert postID to ObjectID
+	objID, err := bson.ObjectIDFromHex(PostId)
+	if err != nil {
+		return nil, errors.Wrap(err, op)
+	}
+
+	// Fetch the post
+	var tmpPost postTmp
+	err = pp.Collection.FindOne(ctx, bson.D{{Key: "_id", Value: objID}}).Decode(&tmpPost)
+	if err == mongo.ErrNoDocuments {
+		return nil, fmt.Errorf("post with ID %s not found", PostId)
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, op)
+	}
+
+	// Calculate score by summing votes.vote
+	updatedScore := 0
+	for _, vote := range tmpPost.Votes {
+		updatedScore += vote.VoteScore
+	}
+
+	// Update the score in MongoDB
+	_, err = pp.Collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: objID}}, bson.D{
+		{Key: "$set", Value: bson.D{{Key: "score", Value: updatedScore}}},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, op)
+	}
+
+	// Update the post object
+	tmpPost.Score = updatedScore
+	ReturnedPost := tmpPost.ToPost()
 	return ReturnedPost, nil
 }

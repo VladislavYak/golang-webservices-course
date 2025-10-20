@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
+	"github.com/go-faster/errors"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -23,13 +24,14 @@ func NewCommentRepoMongo(client *mongo.Client, dbName string, collectionName str
 }
 
 func (cr *CommentRepoMongo) AddComment(Id string, Comment *comment.Comment) error {
+	const op = "Add Comment"
 	fmt.Println("inserteing comment")
 
 	Comment.WithId(bson.NewObjectID().Hex())
 
 	objID, err := bson.ObjectIDFromHex(Id)
 	if err != nil {
-		return fmt.Errorf("invalid post ID: %w", err)
+		return errors.Wrap(err, op)
 	}
 
 	update := bson.M{
@@ -44,7 +46,7 @@ func (cr *CommentRepoMongo) AddComment(Id string, Comment *comment.Comment) erro
 		update,
 	)
 	if err != nil {
-		return err
+		return errors.Wrap(err, op)
 	}
 
 	if result.MatchedCount == 0 {

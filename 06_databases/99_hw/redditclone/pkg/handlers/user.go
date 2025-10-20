@@ -26,11 +26,11 @@ func (uh *UserHandler) Login(c echo.Context) error {
 	form := &LoginForm{}
 
 	if err := c.Bind(form); err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 	token, err := uh.Impl.Login(c.Request().Context(), form.Username, form.Password)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{
@@ -45,14 +45,14 @@ func (uh *UserHandler) Register(c echo.Context) error {
 	fmt.Println("before logging")
 
 	if err := c.Bind(form); err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	fmt.Println("form.Username", form.Username)
 	token, err := uh.Impl.Register(c.Request().Context(), form.Username, form.Password)
 	if err != nil {
 		fmt.Println("i was here")
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	fmt.Println("token Register", token)

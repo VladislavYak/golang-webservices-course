@@ -3,10 +3,12 @@ module github.com/VladislavYak/redditclone
 go 1.23.6
 
 require (
+	github.com/go-faster/errors v0.7.1
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/labstack/echo-jwt/v4 v4.3.1
 	github.com/labstack/echo/v4 v4.13.4
+	github.com/pkg/errors v0.9.1
 	go.mongodb.org/mongo-driver/v2 v2.3.0
 )
 

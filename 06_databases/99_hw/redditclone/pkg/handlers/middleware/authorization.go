@@ -99,6 +99,7 @@ func CustomAuth(config *echojwt.Config, userService application.UserInterface) e
 					fmt.Println("before running ValidateSession")
 					err = userService.ValidateSession(c.Request().Context(), token.Raw, claims.ExpiresAt.Time)
 					if err != nil {
+						// yakovlev: пока что хз как тут ошибки обарабывать, errors.Wrap или ХТТПШные?
 						return err
 					}
 

@@ -2,9 +2,10 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
+
+	"github.com/go-faster/errors"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
@@ -48,6 +49,7 @@ func NewUserImpl(repo user.UserRepository) *UserImpl {
 }
 
 func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (string, error) {
+	const op = "Register"
 
 	// yakovlev: это нужно как-то добавить
 	// ui.ur.GetUser(ctx, User)
@@ -60,7 +62,7 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 	fmt.Println("before ui.ur.Cerate")
 	u, err := ui.ur.Create(ctx, u, Password)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, op)
 	}
 
 	issuedAt := time.Now()
@@ -78,26 +80,27 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 	Token, err := auth.GenerateJWTToken(Claims, ui.JWTSecret)
 
 	if err != nil {
-		return "", errors.New("failed to generate token")
+		return "", errors.Wrap(err, op)
 	}
 
 	if err = ui.ur.AddJWT(ctx, Token, Claims.UserID, Claims.IssuedAt.Time, Claims.ExpiresAt.Time); err != nil {
-		return "", err
+		return "", errors.Wrap(err, op)
 	}
 
 	return Token, nil
 }
 
 func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, error) {
+	const op = "Login"
 
 	User, err := ui.ur.GetUser(ctx, user.NewUser(Login))
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, op)
 	}
 
 	actualPass, err := ui.ur.GetUserPassword(ctx, User)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, op)
 	}
 
 	if actualPass != Password {
@@ -113,12 +116,21 @@ func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, 
 	}
 	token, err := auth.GenerateJWTToken(claims, ui.JWTSecret)
 
+	if err != nil {
+		return "", errors.Wrap(err, op)
+	}
+
 	return token, nil
 
 }
 
 func (ui *UserImpl) ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error {
+	const op = "ValidateSession"
 	err := ui.ur.ValidateJWT(ctx, Token, ExpiresAt)
 
-	return err
+	if err != nil {
+		return errors.Wrap(err, op)
+	}
+
+	return nil
 }

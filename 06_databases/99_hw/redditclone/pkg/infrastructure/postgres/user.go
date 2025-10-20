@@ -3,9 +3,10 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
+
+	"github.com/go-faster/errors"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	"github.com/jackc/pgx/v5"
@@ -23,6 +24,7 @@ func NewUserRepoPostgres(pool *pgxpool.Pool) *UserRepoPostgres {
 }
 
 func (r *UserRepoPostgres) GetUser(ctx context.Context, User *user.User) (*user.User, error) {
+	const op = "GetUser"
 	// yakovlev: по идее тут перед логином я должен проверять, есть ли сессия (?) в таблице sessions в пг
 	// также я должен проверять не протухла ли она (поле expires_at)
 
@@ -34,36 +36,43 @@ func (r *UserRepoPostgres) GetUser(ctx context.Context, User *user.User) (*user.
 		return nil, errors.New("user not found")
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, op)
 	}
 	return &u, nil
 }
 
 func (r *UserRepoPostgres) Create(ctx context.Context, User *user.User, Password string) (*user.User, error) {
+	const op = "Create"
+
 	fmt.Println("before insertion Create")
+
 	err := r.Pool.QueryRow(ctx,
 		"INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id",
 		User.Username, Password,
 	).Scan(&User.UserID)
+
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, op)
 	}
 	return User, nil
 }
 
 func (r *UserRepoPostgres) GetUserPassword(ctx context.Context, user *user.User) (string, error) {
+	const op = "GetUserPassword"
+
 	var Password string
 	err := r.Pool.QueryRow(ctx, "select password from users where username = $1", user.Username).Scan(Password)
 	if err == pgx.ErrNoRows {
 		return "", errors.New("user not found")
 	}
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, op)
 	}
 	return Password, nil
 }
 
 func (r *UserRepoPostgres) AddJWT(ctx context.Context, Token string, UserID string, IssuedAt time.Time, ExpiresAt time.Time) error {
+	const op = "AddJWT"
 	fmt.Println("before Add JWT")
 
 	fmt.Println("")
@@ -75,7 +84,7 @@ func (r *UserRepoPostgres) AddJWT(ctx context.Context, Token string, UserID stri
 	fmt.Println("errrrrr", err)
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, op)
 	}
 
 	return nil
@@ -86,6 +95,7 @@ func (r *UserRepoPostgres) AddJWT(ctx context.Context, Token string, UserID stri
 // (2, 'sample_jwt_token_2', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour');
 
 func (r *UserRepoPostgres) ValidateJWT(ctx context.Context, Token string, ExpiresAt time.Time) error {
+	const op = "ValidateJWT"
 	fmt.Println("inside ValidateJWT")
 	var expiresAt time.Time
 	err := r.Pool.QueryRow(ctx, "select expires_at from sessions where token = $1", Token).Scan(&expiresAt)
@@ -95,7 +105,7 @@ func (r *UserRepoPostgres) ValidateJWT(ctx context.Context, Token string, Expire
 	}
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, op)
 	}
 
 	fmt.Println("я тут")

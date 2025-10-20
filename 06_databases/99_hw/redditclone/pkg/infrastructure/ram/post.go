@@ -193,3 +193,7 @@ func (pp *PostRepo) Unvote(ctx context.Context, id string) (*post.Post, error) {
 
 	return nil, errors.New("this id doesnot exist")
 }
+
+func (pp *PostRepo) UpdateScore(ctx context.Context, Post *post.Post) (*post.Post, error) {
+	return nil, nil
+}

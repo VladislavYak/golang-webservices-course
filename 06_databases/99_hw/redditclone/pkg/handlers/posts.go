@@ -28,7 +28,7 @@ type PostHandler struct {
 func (ph *PostHandler) GetPosts(c echo.Context) error {
 	posts, err := ph.Implementation.GetAll(context.TODO())
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "cannot get posts")
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, posts)
@@ -41,7 +41,7 @@ func (ph *PostHandler) GetPostsByCategoryName(c echo.Context) error {
 	posts, err := ph.Implementation.GetPostsByCategoryName(context.TODO(), CategoryName)
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "cannot get posts")
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, posts)
@@ -56,7 +56,7 @@ func (ph *PostHandler) GetPostByID(c echo.Context) error {
 
 	post, err := ph.Implementation.GetByID(context.TODO(), id)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, post)
@@ -68,7 +68,7 @@ func (ph *PostHandler) GetPostByUsername(c echo.Context) error {
 
 	post, err := ph.Implementation.GetByUsername(context.TODO(), username)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, post)
@@ -79,27 +79,24 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 
 	us := c.Get("user").(*jwt.Token)
 
-	fmt.Println("us.Raw (this is token?)", us.Raw)
-
-	// yakovlev: do this at middleware somehow
 	claims := us.Claims.(*auth.JwtCustomClaims)
 
 	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "username", claims.Login)
-	ctx = context.WithValue(ctx, "id", claims.UserID)
+	ctx = context.WithValue(ctx, "Username", claims.Login)
+	ctx = context.WithValue(ctx, "UserID", claims.UserID)
 
 	pp := &PostParams{}
 	if err := c.Bind(pp); err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 	}
 
-	fmt.Println("username (handler)", ctx.Value("username"))
-	fmt.Println("UserID (handler)", ctx.Value("id"))
+	fmt.Println("Username (handler)", ctx.Value("Username"))
+	fmt.Println("UserID (handler)", ctx.Value("UserID"))
 	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, *user.NewUser(claims.Login).WithID(claims.UserID))
 
 	postReturned, err := ph.Implementation.Create(ctx, Post)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "cannot add post")
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusCreated, postReturned)
@@ -130,7 +127,7 @@ func (ph *PostHandler) Upvote(c echo.Context) error {
 	returnedPost, err := ph.Implementation.Upvote(ctx, PostId)
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return echo.NewHTTPError(http.StatusOK, returnedPost)
@@ -150,7 +147,7 @@ func (ph *PostHandler) Downvote(c echo.Context) error {
 	returnedPost, err := ph.Implementation.Downvote(ctx, PostId)
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return echo.NewHTTPError(http.StatusOK, returnedPost)
@@ -169,7 +166,7 @@ func (ph *PostHandler) Unvote(c echo.Context) error {
 	returnedPost, err := ph.Implementation.Unvote(ctx, PostId)
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return echo.NewHTTPError(http.StatusOK, returnedPost)

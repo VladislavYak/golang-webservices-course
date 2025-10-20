@@ -40,7 +40,7 @@ func (ch *CommentHandler) AddComment(c echo.Context) error {
 
 	returnedPost, err := ch.Implementation.AddComment(context.TODO(), id, Comment)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return echo.NewHTTPError(http.StatusCreated, returnedPost)
@@ -52,7 +52,7 @@ func (ch *CommentHandler) DeleteComment(c echo.Context) error {
 
 	returnedPost, err := ch.Implementation.DeleteComment(context.TODO(), id, CommentId)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 	return echo.NewHTTPError(http.StatusCreated, returnedPost)
 }
