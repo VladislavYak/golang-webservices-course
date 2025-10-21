@@ -1,4 +1,3 @@
-// pkg/infrastructure/postgres/user.go
 package postgres
 
 import (
@@ -25,15 +24,12 @@ func NewUserRepoPostgres(pool *pgxpool.Pool) *UserRepoPostgres {
 
 func (r *UserRepoPostgres) GetUser(ctx context.Context, User *user.User) (*user.User, error) {
 	const op = "GetUser"
-	// yakovlev: по идее тут перед логином я должен проверять, есть ли сессия (?) в таблице sessions в пг
-	// также я должен проверять не протухла ли она (поле expires_at)
 
-	// ну кстати не в репозитории это делать. Наверно это надо уносить куда-то логику выше
 	var u user.User
 	err := r.Pool.QueryRow(ctx, "SELECT id, login, password FROM users WHERE login = $1", User.Username).
 		Scan(&u.UserID, &u.Username)
 	if err == pgx.ErrNoRows {
-		return nil, errors.New("user not found")
+		return nil, user.UserNotExistsError
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, op)

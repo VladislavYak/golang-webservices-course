@@ -51,13 +51,11 @@ func NewUserImpl(repo user.UserRepository) *UserImpl {
 func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (string, error) {
 	const op = "Register"
 
-	// yakovlev: это нужно как-то добавить
-	// ui.ur.GetUser(ctx, User)
-	// if _, err := ui.ur.GetUser(ctx, User); err == nil {
-	//     return "", echo.NewHTTPError(http.StatusBadRequest, "user with this login already exists")
-	// }
-
 	u := user.NewUser(Login)
+
+	if _, err := ui.ur.GetUser(ctx, u); !errors.Is(err, user.UserNotExistsError) {
+		return "", user.UserAlreadyExistsError
+	}
 
 	fmt.Println("before ui.ur.Cerate")
 	u, err := ui.ur.Create(ctx, u, Password)

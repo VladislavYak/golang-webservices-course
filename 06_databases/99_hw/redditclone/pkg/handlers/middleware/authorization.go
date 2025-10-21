@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+// yakovlev: prettify it, it looks awful right now
 func CustomAuth(config *echojwt.Config, userService application.UserInterface) echo.MiddlewareFunc {
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {

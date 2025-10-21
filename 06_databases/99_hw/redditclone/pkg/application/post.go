@@ -63,6 +63,7 @@ func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, e
 }
 
 // yakovlev: тут возвращать delete надо
+// yakovlev: в целом этот метод не исползуется пока что, на фронте тупо нет кнопки для удаления. Надо через постман потестить...
 func (p *PostImpl) Delete(ctx context.Context, s string) (*postP.Post, error) {
 	const op = "Delete"
 	returnedPost, err := p.repo.DeletePost(ctx, s)
