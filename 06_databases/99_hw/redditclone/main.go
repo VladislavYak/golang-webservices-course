@@ -2,53 +2,39 @@ package main
 
 import (
 	"context"
-	"time"
+	"fmt"
 
+	"github.com/VladislavYak/redditclone/mocks"
+	"github.com/VladislavYak/redditclone/pkg/application"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"github.com/VladislavYak/redditclone/pkg/domain/user"
+	"go.uber.org/mock/gomock"
 )
 
 func main() {
-	client, _ := mongo.Connect(options.Client().ApplyURI("mongodb://localhost:27017"))
+	ctrl := gomock.NewController(nil)
+	defer ctrl.Finish()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	mockPostRepo := mocks.NewMockPostRepository(ctrl)
+	// mockRepoComment := mocks.NewMockCommentRepository(ctrl)
 
-	defer func() {
-		if err := client.Disconnect(ctx); err != nil {
-			panic(err)
-		}
-	}()
+	newPost := post.NewPost("test", "test", "test", "test", "test", *user.NewUser("Vlad"))
 
-	collection := client.Database("testing").Collection("numbers")
+	mockPostRepo.EXPECT().AddPost(gomock.Any(), newPost).Return(post.NewPost("test1", "test1", "test1", "test1", "test1", *user.NewUser("Egor")), nil)
 
-	// MyPost := post.NewPost("music", "text", "", "asdiojasdasd", "waswawa", *user.NewUser("vlad"))
+	ctx := context.Background()
 
-	// result, _ := collection.InsertOne(context.TODO(), MyPost)
+	application.NewPostImpl(mockPostRepo)
 
-	// fmt.Println("result", result.InsertedID)
+	post, err := mockPostRepo.AddPost(ctx, newPost)
 
-	cursor, err := collection.Find(context.TODO(), bson.D{})
+	fmt.Println("post", post)
 
 	if err != nil {
-		panic(err)
+		fmt.Printf("ERROR: %v\n", err)
+		return
 	}
 
-	var Posts []*post.Post
-	if err := cursor.All(context.TODO(), &Posts); err != nil {
-		// change panic to something
-		panic(err)
-	}
-	// fmt.Println("posts", Posts[0].MongoId)
+	fmt.Printf("SUCCESS: Created post %+v\n", post)
 
-	// fmt.Printf("Inserted document with _id: %v\n", result.InsertedID)
-
-	// res, _ := collection.InsertOne(ctx, bson.D{{Key: "name", Value: "pi"}, {Key: "value", Value: 3.14159}})
-	// id := res.InsertedID
-
-	// fmt.Println("id", id)
 }
-
-// https://deepwiki.com/mongodb/mongo-go-driver/4.1-marshalunmarshal

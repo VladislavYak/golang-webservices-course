@@ -10,6 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+var _ comment.CommentRepository = new(CommentRepoMongo)
+
 type CommentRepoMongo struct {
 	Collection *mongo.Collection
 }
