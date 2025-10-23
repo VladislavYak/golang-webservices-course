@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/VladislavYak/redditclone/pkg/domain"
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
@@ -157,6 +158,7 @@ func (pp *PostRepoMongo) GetPostsByUsername(ctx context.Context, Username string
 	return Posts, nil
 }
 
+// тут написана хрень
 func (pp *PostRepoMongo) UpdatePostViews(ID string) error {
 
 	value, _ := bson.ObjectIDFromHex(ID)
@@ -307,7 +309,7 @@ func (pp *PostRepoMongo) Upvote(ctx context.Context, PostID string) (*post.Post,
 	ReturnedPost := tmpPost.ToPost()
 
 	if err == mongo.ErrNoDocuments {
-		return nil, fmt.Errorf("post with ID %s not found", PostID)
+		return nil, domain.PostNotFoundError
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, op)

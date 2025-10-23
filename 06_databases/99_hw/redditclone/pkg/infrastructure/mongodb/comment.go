@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/VladislavYak/redditclone/pkg/domain"
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
 	"github.com/go-faster/errors"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -52,7 +53,7 @@ func (cr *CommentRepoMongo) AddComment(Id string, Comment *comment.Comment) erro
 	}
 
 	if result.MatchedCount == 0 {
-		return fmt.Errorf("no post found with ID %s", Id)
+		return domain.PostNotFoundError
 	}
 
 	return nil
@@ -85,7 +86,7 @@ func (cr *CommentRepoMongo) DeleteComment(Id string, CommentId string) error {
 		return fmt.Errorf("failed to delete comment: %w", err)
 	}
 	if result.MatchedCount == 0 {
-		return fmt.Errorf("no post found with ID %s", Id)
+		return domain.PostNotFoundError
 	}
 	if result.ModifiedCount == 0 {
 		return fmt.Errorf("no comment found with ID %s in post %s", CommentId, Id)

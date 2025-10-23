@@ -21,8 +21,3 @@ func (c *Comment) WithId(id string) *Comment {
 	c.Id = id
 	return c
 }
-
-type CommentRepository interface {
-	AddComment(string, *Comment) error
-	DeleteComment(string, string) error
-}

@@ -25,7 +25,6 @@ type RegisterForm struct {
 type UserInterface interface {
 	Login(ctx context.Context, Login, Password string) (string, error)
 	Register(ctx context.Context, Login, Password string) (string, error)
-	// ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error
 }
 
 var _ UserInterface = new(UserImpl)

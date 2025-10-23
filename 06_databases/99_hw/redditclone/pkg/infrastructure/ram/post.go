@@ -118,7 +118,9 @@ func (pp *PostRepo) Upvote(ctx context.Context, PostId string) (*post.Post, erro
 				if voteIter.User == UserId {
 
 					pp.Data[i].Votes[j].WithVote(1)
-					pp.Data[i].UpdateScore()
+
+					pp.UpdateScore(ctx, Post.Id)
+					// pp.Data[i].UpdateScore()
 					return pp.Data[i], nil
 				}
 			}
@@ -126,7 +128,7 @@ func (pp *PostRepo) Upvote(ctx context.Context, PostId string) (*post.Post, erro
 			pp.Data[i].Votes = append(pp.Data[i].Votes, post.Vote{User: UserId, VoteScore: 1})
 			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
 
-			pp.Data[i].UpdateScore()
+			pp.UpdateScore(ctx, Post.Id)
 
 			return pp.Data[i], nil
 		}
@@ -150,7 +152,7 @@ func (pp *PostRepo) Downvote(ctx context.Context, id string) (*post.Post, error)
 				if voteIter.User == UserId {
 
 					pp.Data[i].Votes[j].WithVote(-1)
-					pp.Data[i].UpdateScore()
+					pp.UpdateScore(ctx, Post.Id)
 					return pp.Data[i], nil
 				}
 			}
@@ -158,7 +160,7 @@ func (pp *PostRepo) Downvote(ctx context.Context, id string) (*post.Post, error)
 			pp.Data[i].Votes = append(pp.Data[i].Votes, post.Vote{User: UserId, VoteScore: -1})
 			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
 
-			pp.Data[i].UpdateScore()
+			pp.UpdateScore(ctx, Post.Id)
 
 			return pp.Data[i], nil
 		}
@@ -182,7 +184,7 @@ func (pp *PostRepo) Unvote(ctx context.Context, id string) (*post.Post, error) {
 				if voteIter.User == UserId {
 
 					pp.Data[i].Votes = append(pp.Data[i].Votes[:j], pp.Data[i].Votes[j+1:]...)
-					pp.Data[i].UpdateScore()
+					pp.UpdateScore(ctx, Post.Id)
 					return pp.Data[i], nil
 				}
 			}

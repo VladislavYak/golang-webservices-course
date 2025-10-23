@@ -1,7 +1,6 @@
 package post
 
 import (
-	"context"
 	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
@@ -46,41 +45,4 @@ func NewPost(category string, postType string, url string, text string, title st
 func (p *Post) WithId(id string) *Post {
 	p.Id = id
 	return p
-}
-
-// yakovlev: this is should be at repo. Probably.
-func (p *Post) UpdateScore() *Post {
-	updatedScore := 0
-	for _, vote := range p.Votes {
-		updatedScore += vote.VoteScore
-	}
-
-	p.Score = updatedScore
-	return p
-}
-
-type PostRepository interface {
-	GetAllPosts(ctx context.Context) ([]*Post, error)
-	GetPostsByCategoryName(ctx context.Context, CategoryName string) ([]*Post, error)
-	GetPostByID(ctx context.Context, ID string) (*Post, error)
-	GetPostsByUsername(ctx context.Context, Username string) ([]*Post, error)
-	AddPost(ctx context.Context, Post *Post) (*Post, error)
-	DeletePost(ctx context.Context, Id string) (*Post, error)
-	// Save(ctx context.Context, user *domain.User) error
-	Upvote(ctx context.Context, PostId string) (*Post, error)
-	Downvote(ctx context.Context, Id string) (*Post, error)
-	Unvote(ctx context.Context, Id string) (*Post, error)
-	// yakovlev: надо добавить UpdateScore - штука, которая
-	UpdateScore(ct context.Context, Id string) (*Post, error)
-}
-
-type Vote struct {
-	User      string `json:"user"`
-	VoteScore int    `json:"vote" bson:"vote"`
-}
-
-func (v *Vote) WithVote(value int) *Vote {
-	v.VoteScore = value
-
-	return v
 }
