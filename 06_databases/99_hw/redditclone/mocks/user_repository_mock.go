@@ -12,7 +12,6 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
-	time "time"
 
 	user "github.com/VladislavYak/redditclone/pkg/domain/user"
 	gomock "go.uber.org/mock/gomock"
@@ -40,20 +39,6 @@ func NewMockUserRepository(ctrl *gomock.Controller) *MockUserRepository {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockUserRepository) EXPECT() *MockUserRepositoryMockRecorder {
 	return m.recorder
-}
-
-// AddJWT mocks base method.
-func (m *MockUserRepository) AddJWT(ctx context.Context, Token, UserID string, IssuedAt, ExpiresAt time.Time) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddJWT", ctx, Token, UserID, IssuedAt, ExpiresAt)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddJWT indicates an expected call of AddJWT.
-func (mr *MockUserRepositoryMockRecorder) AddJWT(ctx, Token, UserID, IssuedAt, ExpiresAt any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJWT", reflect.TypeOf((*MockUserRepository)(nil).AddJWT), ctx, Token, UserID, IssuedAt, ExpiresAt)
 }
 
 // Create mocks base method.
@@ -99,18 +84,4 @@ func (m *MockUserRepository) GetUserPassword(ctx context.Context, arg1 *user.Use
 func (mr *MockUserRepositoryMockRecorder) GetUserPassword(ctx, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserPassword", reflect.TypeOf((*MockUserRepository)(nil).GetUserPassword), ctx, arg1)
-}
-
-// ValidateJWT mocks base method.
-func (m *MockUserRepository) ValidateJWT(ctx context.Context, Token string, ExpiresAt time.Time) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateJWT", ctx, Token, ExpiresAt)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateJWT indicates an expected call of ValidateJWT.
-func (mr *MockUserRepositoryMockRecorder) ValidateJWT(ctx, Token, ExpiresAt any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateJWT", reflect.TypeOf((*MockUserRepository)(nil).ValidateJWT), ctx, Token, ExpiresAt)
 }

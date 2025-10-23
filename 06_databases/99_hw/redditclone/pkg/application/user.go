@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-faster/errors"
 
+	"github.com/VladislavYak/redditclone/pkg/domain/auth"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
@@ -22,30 +22,24 @@ type RegisterForm struct {
 	Password string `json:"password"`
 }
 
-// jwtCustomClaims are custom claims extending default ones.
-// See https://github.com/golang-jwt/jwt for more examples
-type JwtCustomClaims struct {
-	Name string `json:"name"`
-	Id   string `json:"id"`
-	jwt.RegisteredClaims
-}
-
 type UserInterface interface {
 	Login(ctx context.Context, Login, Password string) (string, error)
 	Register(ctx context.Context, Login, Password string) (string, error)
-	ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error
+	// ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error
 }
 
 var _ UserInterface = new(UserImpl)
 
 type UserImpl struct {
-	ur        user.UserRepository
+	ur user.UserRepository
+	ar auth.AuthRepository
+	// lazy now
 	JWTSecret string
 }
 
-func NewUserImpl(repo user.UserRepository) *UserImpl {
+func NewUserImpl(repo user.UserRepository, AuthRepo auth.AuthRepository) *UserImpl {
 	// yakovlev: JWTSecret which?
-	return &UserImpl{ur: repo}
+	return &UserImpl{ur: repo, ar: AuthRepo}
 }
 
 func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (string, error) {
@@ -81,7 +75,7 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 		return "", errors.Wrap(err, op)
 	}
 
-	if err = ui.ur.AddJWT(ctx, Token, Claims.UserID, Claims.IssuedAt.Time, Claims.ExpiresAt.Time); err != nil {
+	if err = ui.ar.AddJWT(ctx, Token, Claims.UserID, Claims.IssuedAt.Time, Claims.ExpiresAt.Time); err != nil {
 		return "", errors.Wrap(err, op)
 	}
 
@@ -122,13 +116,14 @@ func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, 
 
 }
 
-func (ui *UserImpl) ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error {
-	const op = "ValidateSession"
-	err := ui.ur.ValidateJWT(ctx, Token, ExpiresAt)
+// // need to be moved to auth
+// func (ui *UserImpl) ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error {
+// 	const op = "ValidateSession"
+// 	err := ui.ur.ValidateJWT(ctx, Token, ExpiresAt)
 
-	if err != nil {
-		return errors.Wrap(err, op)
-	}
+// 	if err != nil {
+// 		return errors.Wrap(err, op)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }

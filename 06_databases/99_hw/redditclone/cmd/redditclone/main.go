@@ -7,8 +7,8 @@ import (
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
 
+	"github.com/VladislavYak/redditclone/pkg/domain/auth"
 	customMiddleware "github.com/VladislavYak/redditclone/pkg/handlers/middleware"
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/postgres"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -31,6 +31,8 @@ func main() {
 		TimeoutSec: 2,
 	}
 
+	// better user DI somehow here
+
 	client, _ := mongodb.NewMongoClient(cfg)
 	pgPool, _ := postgres.NewPgPool()
 
@@ -38,13 +40,15 @@ func main() {
 	// UserRepo := ram.NewUserRepo()
 	PostRepo := mongodb.NewPostRepoMongo(client, "testing", "posts")
 	// PostRepo := ram.NewPostRepo()
+	AuthRepo := postgres.NewAuthRepoPostgres(pgPool)
 
 	CommentRepo := mongodb.NewCommentRepoMongo(client, "testing", "posts")
 	// CommentRepo := ram.NewCommentRepo()
 
 	PostImpl := application.NewPostImpl(PostRepo)
 	CommentImpl := application.NewCommentImpl(PostRepo, CommentRepo)
-	UserImpl := application.NewUserImpl(UserRepo)
+	UserImpl := application.NewUserImpl(UserRepo, AuthRepo)
+	AuthImpl := application.NewAuthImpl(AuthRepo)
 
 	postHandler := handlers.PostHandler{Implementation: PostImpl}
 	commentHandler := handlers.CommentHandler{Implementation: CommentImpl}
@@ -82,7 +86,7 @@ func main() {
 
 		fmt.Println("config", config)
 
-		g.Use(customMiddleware.CustomAuth(&config, UserImpl))
+		g.Use(customMiddleware.CustomAuth(&config, AuthImpl))
 		// в общем кажется, что надо откащываться от этой withConfig и писать свою мидлварь для авторизации где есть проверка на валидность токена в бд
 		// basicAuthMiddleware := echojwt.WithConfig(config)
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
+	"github.com/VladislavYak/redditclone/pkg/domain/auth"
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -13,7 +13,7 @@ import (
 )
 
 // yakovlev: prettify it, it looks awful right now
-func CustomAuth(config *echojwt.Config, userService application.UserInterface) echo.MiddlewareFunc {
+func CustomAuth(config *echojwt.Config, authService *application.AuthImpl) echo.MiddlewareFunc {
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -98,7 +98,7 @@ func CustomAuth(config *echojwt.Config, userService application.UserInterface) e
 					}
 
 					fmt.Println("before running ValidateSession")
-					err = userService.ValidateSession(c.Request().Context(), token.Raw, claims.ExpiresAt.Time)
+					err = authService.ValidateSession(c.Request().Context(), token.Raw, claims.ExpiresAt.Time)
 					if err != nil {
 						// yakovlev: пока что хз как тут ошибки обарабывать, errors.Wrap или ХТТПШные?
 						return err

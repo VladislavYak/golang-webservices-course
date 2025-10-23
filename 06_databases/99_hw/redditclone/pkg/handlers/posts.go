@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
+	"github.com/VladislavYak/redditclone/pkg/domain/auth"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
-	"github.com/VladislavYak/redditclone/pkg/infrastructure/auth"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
