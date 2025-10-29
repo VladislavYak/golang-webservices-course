@@ -34,18 +34,14 @@ func NewPostImpl(repo postP.PostRepository) *PostImpl {
 // Compile-time check if PostImpl implements PostInterface
 var _ PostInterface = new(PostImpl)
 
-// yakovlev: на самом деле updateScore должен быть частью upvote и downvote, возможно стоит все-таки вынести в Repo.
 func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, error) {
 	const op = "Create"
 
-	fmt.Println("inside create")
 	returnedPost, err := p.repo.AddPost(ctx, Post)
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
-
-	fmt.Println("returnedPost.Id", returnedPost.Id)
 
 	returnedPost, err = p.repo.Upvote(ctx, returnedPost.Id)
 	if err != nil {
@@ -56,8 +52,6 @@ func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, e
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
-
-	fmt.Println("returnedPost", returnedPost)
 
 	return returnedPost, err
 }

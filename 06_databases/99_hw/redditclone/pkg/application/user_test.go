@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/VladislavYak/redditclone/mocks"
+	"github.com/VladislavYak/redditclone/pkg/domain/auth"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
 	"github.com/go-faster/errors"
 	"github.com/stretchr/testify/suite"
@@ -90,8 +91,78 @@ func (s *UserServiceTestSuite) TestRegister() {
 
 	})
 
+	t.Run("invalid jwt token", func(t *testing.T) {
+
+		s.userImpl.JWTSecret = "invalid_token"
+
+		expected := ""
+
+		User := user.NewUser("Vlad")
+
+		s.UsermockRepo.EXPECT().
+			GetUser(s.ctx, User).
+			Return(nil, user.UserNotExistsError)
+		s.UsermockRepo.EXPECT().
+			Create(s.ctx, User, "pass").
+			Return(nil, errors.New("err"))
+
+		token, err := s.userImpl.Register(s.ctx, "Vlad", "pass")
+
+		s.Error(err)
+		s.Equal(token, expected)
+
+	})
+
+}
+
+func (s *UserServiceTestSuite) TestLogin() {
+	t := s.T()
+
+	t.Run("user not exists error", func(t *testing.T) {
+
+		User := user.NewUser("Vlad")
+
+		s.UsermockRepo.EXPECT().GetUser(s.ctx, User).Return(nil, user.UserNotExistsError)
+
+		_, err := s.userImpl.Login(s.ctx, "Vlad", "pass")
+
+		s.Assert().ErrorIs(err, user.UserNotExistsError)
+
+	})
+
+	t.Run("invalid password", func(t *testing.T) {
+		login := "Vlad"
+		password := "pass"
+		User := user.NewUser(login).WithID("123") // ← Точный User с ID!
+
+		s.UsermockRepo.EXPECT().GetUser(s.ctx, user.NewUser(login)).Return(User, nil)
+
+		s.UsermockRepo.EXPECT().GetUserPassword(s.ctx, User).Return("not_those_pass", nil)
+
+		_, err := s.userImpl.Login(s.ctx, login, password)
+
+		s.Assert().ErrorIs(err, auth.InvalidPasswordError)
+
+	})
+
+	t.Run("token generation error", func(t *testing.T) {
+		login := "Vlad"
+		password := "pass"
+		User := user.NewUser(login).WithID("123") // ← Точный User с ID!
+
+		s.UsermockRepo.EXPECT().GetUser(s.ctx, user.NewUser(login)).Return(User, nil)
+
+		s.UsermockRepo.EXPECT().GetUserPassword(s.ctx, User).Return("not_those_pass", nil)
+
+		_, err := s.userImpl.Login(s.ctx, login, password)
+
+		s.Assert().ErrorIs(err, auth.InvalidPasswordError)
+
+	})
+
 }
 
 func TestSuite(t *testing.T) {
 	suite.Run(t, new(UserServiceTestSuite))
+	suite.Run(t, new(PostServiceTestSuite))
 }

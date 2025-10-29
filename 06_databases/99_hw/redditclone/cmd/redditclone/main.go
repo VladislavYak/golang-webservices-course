@@ -31,6 +31,9 @@ func main() {
 		TimeoutSec: 2,
 	}
 
+	// need to
+	var JwtSecret = "secret"
+
 	// better user DI somehow here
 
 	client, _ := mongodb.NewMongoClient(cfg)
@@ -47,7 +50,7 @@ func main() {
 
 	PostImpl := application.NewPostImpl(PostRepo)
 	CommentImpl := application.NewCommentImpl(PostRepo, CommentRepo)
-	UserImpl := application.NewUserImpl(UserRepo, AuthRepo)
+	UserImpl := application.NewUserImpl(UserRepo, AuthRepo, JwtSecret)
 	AuthImpl := application.NewAuthImpl(AuthRepo)
 
 	postHandler := handlers.PostHandler{Implementation: PostImpl}

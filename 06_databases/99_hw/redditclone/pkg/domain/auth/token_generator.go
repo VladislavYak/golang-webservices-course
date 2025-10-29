@@ -5,10 +5,12 @@ import (
 )
 
 func GenerateJWTToken(Claims *JwtCustomClaims, Secret string) (string, error) {
-	// yakovlev: temp hardcoding
-
-	Secret = "secret"
 
 	Token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims)
-	return Token.SignedString([]byte(Secret))
+
+	SignedToken, err := Token.SignedString([]byte(Secret))
+	if err != nil {
+		return "", InvalidTokenError
+	}
+	return SignedToken, nil
 }

@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-faster/errors"
@@ -36,9 +35,9 @@ type UserImpl struct {
 	JWTSecret string
 }
 
-func NewUserImpl(repo user.UserRepository, AuthRepo auth.AuthRepository) *UserImpl {
+func NewUserImpl(repo user.UserRepository, AuthRepo auth.AuthRepository, JwtSecret string) *UserImpl {
 	// yakovlev: JWTSecret which?
-	return &UserImpl{ur: repo, ar: AuthRepo}
+	return &UserImpl{ur: repo, ar: AuthRepo, JWTSecret: JwtSecret}
 }
 
 func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (string, error) {
@@ -50,7 +49,6 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 		return "", user.UserAlreadyExistsError
 	}
 
-	fmt.Println("before ui.ur.Cerate")
 	u, err := ui.ur.Create(ctx, u, Password)
 	if err != nil {
 		return "", errors.Wrap(err, op)
@@ -95,7 +93,7 @@ func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, 
 	}
 
 	if actualPass != Password {
-		return "", errors.New("invalid password")
+		return "", auth.InvalidPasswordError
 	}
 
 	claims := &auth.JwtCustomClaims{
@@ -105,6 +103,7 @@ func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, 
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
 		},
 	}
+
 	token, err := auth.GenerateJWTToken(claims, ui.JWTSecret)
 
 	if err != nil {
@@ -114,15 +113,3 @@ func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, 
 	return token, nil
 
 }
-
-// // need to be moved to auth
-// func (ui *UserImpl) ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error {
-// 	const op = "ValidateSession"
-// 	err := ui.ur.ValidateJWT(ctx, Token, ExpiresAt)
-
-// 	if err != nil {
-// 		return errors.Wrap(err, op)
-// 	}
-
-// 	return nil
-// }
