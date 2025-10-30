@@ -65,16 +65,6 @@ func (pp *PostRepo) GetPostsByUsername(ctx context.Context, Username string) ([]
 
 }
 
-func (pp *PostRepo) UpdatePostViews(ctx context.Context, ID string) error {
-	for _, Post := range pp.Data {
-		if Post.Id == ID {
-			Post.Views += 1
-			return nil
-		}
-	}
-	return errors.New("not found")
-}
-
 func (pp *PostRepo) AddPost(ctx context.Context, Post *post.Post) (*post.Post, error) {
 	// pretty random handling mutexes
 	pp.Mutex.Lock()
@@ -103,71 +93,76 @@ func (pp *PostRepo) DeletePost(ctx context.Context, Id string) (*post.Post, erro
 }
 
 // yakovlev: add proper error handling
-func (pp *PostRepo) Upvote(ctx context.Context, PostId string) (*post.Post, error) {
-	pp.Mutex.Lock()
-	defer pp.Mutex.Unlock()
 
-	UserId, ok := ctx.Value("UserID").(string)
-	if !ok {
-		return nil, errors.New("cannot cast userID to string")
-	}
-
-	for i, Post := range pp.Data {
-		if Post.Id == PostId {
-			for j, voteIter := range Post.Votes {
-				if voteIter.User == UserId {
-
-					pp.Data[i].Votes[j].WithVote(1)
-
-					pp.UpdateScore(ctx, Post.Id)
-					// pp.Data[i].UpdateScore()
-					return pp.Data[i], nil
-				}
-			}
-
-			pp.Data[i].Votes = append(pp.Data[i].Votes, post.Vote{User: UserId, VoteScore: 1})
-			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
-
-			pp.UpdateScore(ctx, Post.Id)
-
-			return pp.Data[i], nil
-		}
-	}
-
-	return nil, errors.New("this PostId doesnot exist")
+func (pp *PostRepo) Vote(ctx context.Context, PostId string, Vote int) (*post.Post, error) {
+	return nil, nil
 }
 
-func (pp *PostRepo) Downvote(ctx context.Context, id string) (*post.Post, error) {
-	pp.Mutex.Lock()
-	defer pp.Mutex.Unlock()
+// func (pp *PostRepo) Upvote(ctx context.Context, PostId string) (*post.Post, error) {
+// 	pp.Mutex.Lock()
+// 	defer pp.Mutex.Unlock()
 
-	UserId, ok := ctx.Value("UserID").(string)
-	if !ok {
-		return nil, errors.New("cannot cast userID to string")
-	}
+// 	UserId, ok := ctx.Value("UserID").(string)
+// 	if !ok {
+// 		return nil, errors.New("cannot cast userID to string")
+// 	}
 
-	for i, Post := range pp.Data {
-		if Post.Id == id {
-			for j, voteIter := range Post.Votes {
-				if voteIter.User == UserId {
+// 	for i, Post := range pp.Data {
+// 		if Post.Id == PostId {
+// 			for j, voteIter := range Post.Votes {
+// 				if voteIter.User == UserId {
 
-					pp.Data[i].Votes[j].WithVote(-1)
-					pp.UpdateScore(ctx, Post.Id)
-					return pp.Data[i], nil
-				}
-			}
+// 					pp.Data[i].Votes[j].WithVote(1)
 
-			pp.Data[i].Votes = append(pp.Data[i].Votes, post.Vote{User: UserId, VoteScore: -1})
-			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
+// 					pp.UpdateScore(ctx, Post.Id)
+// 					// pp.Data[i].UpdateScore()
+// 					return pp.Data[i], nil
+// 				}
+// 			}
 
-			pp.UpdateScore(ctx, Post.Id)
+// 			pp.Data[i].Votes = append(pp.Data[i].Votes, post.Vote{User: UserId, VoteScore: 1})
+// 			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
 
-			return pp.Data[i], nil
-		}
-	}
+// 			pp.UpdateScore(ctx, Post.Id)
 
-	return nil, errors.New("this id doesnot exist")
-}
+// 			return pp.Data[i], nil
+// 		}
+// 	}
+
+// 	return nil, errors.New("this PostId doesnot exist")
+// }
+
+// func (pp *PostRepo) Downvote(ctx context.Context, id string) (*post.Post, error) {
+// 	pp.Mutex.Lock()
+// 	defer pp.Mutex.Unlock()
+
+// 	UserId, ok := ctx.Value("UserID").(string)
+// 	if !ok {
+// 		return nil, errors.New("cannot cast userID to string")
+// 	}
+
+// 	for i, Post := range pp.Data {
+// 		if Post.Id == id {
+// 			for j, voteIter := range Post.Votes {
+// 				if voteIter.User == UserId {
+
+// 					pp.Data[i].Votes[j].WithVote(-1)
+// 					pp.UpdateScore(ctx, Post.Id)
+// 					return pp.Data[i], nil
+// 				}
+// 			}
+
+// 			pp.Data[i].Votes = append(pp.Data[i].Votes, post.Vote{User: UserId, VoteScore: -1})
+// 			// Post.Votes = append(Post.Votes, Vote{User: user_id, VoteScore: -1})
+
+// 			pp.UpdateScore(ctx, Post.Id)
+
+// 			return pp.Data[i], nil
+// 		}
+// 	}
+
+// 	return nil, errors.New("this id doesnot exist")
+// }
 
 func (pp *PostRepo) Unvote(ctx context.Context, id string) (*post.Post, error) {
 	pp.Mutex.Lock()

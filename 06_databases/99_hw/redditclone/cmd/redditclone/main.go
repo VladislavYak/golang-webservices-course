@@ -99,6 +99,8 @@ func main() {
 		// g.Use(basicAuthMiddleware)
 
 		g.POST("/posts", postHandler.PostPost)
+		// deletePost особенный - бросать нужно 401, когда пытаемся удалить не свой пост.
+		// при этом в идеале фронт даже показывать кнопку delete не должен
 		g.DELETE("/post/:id", postHandler.DeletePost)
 		g.POST("/post/:id", commentHandler.AddComment)
 		g.DELETE("/post/:id/:commentId", commentHandler.DeleteComment)

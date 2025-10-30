@@ -50,10 +50,6 @@ func (ph *PostHandler) GetPostsByCategoryName(c echo.Context) error {
 func (ph *PostHandler) GetPostByID(c echo.Context) error {
 	id := c.Param("id")
 
-	// if err := ph.Repo.UpdatePostViews(id); err != nil {
-	// 	return err
-	// }
-
 	post, err := ph.Implementation.GetByID(context.TODO(), id)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -66,7 +62,7 @@ func (ph *PostHandler) GetPostByID(c echo.Context) error {
 func (ph *PostHandler) GetPostByUsername(c echo.Context) error {
 	username := c.Param("username")
 
-	post, err := ph.Implementation.GetByUsername(context.TODO(), username)
+	post, err := ph.Implementation.GetPostsByUsername(context.TODO(), username)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
@@ -106,7 +102,15 @@ func (ph *PostHandler) DeletePost(c echo.Context) error {
 
 	id := c.Param("id")
 
-	deletedPost, err := ph.Implementation.Delete(context.TODO(), id)
+	us := c.Get("user").(*jwt.Token)
+
+	claims := us.Claims.(*auth.JwtCustomClaims)
+
+	ctx := c.Request().Context()
+	ctx = context.WithValue(ctx, "Username", claims.Login)
+	ctx = context.WithValue(ctx, "UserID", claims.UserID)
+
+	deletedPost, err := ph.Implementation.Delete(ctx, id)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}

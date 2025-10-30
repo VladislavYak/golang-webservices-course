@@ -162,7 +162,6 @@ func (s *UserServiceTestSuite) TestLogin() {
 
 }
 
-func TestSuite(t *testing.T) {
+func TestUserServiceTestSuite(t *testing.T) {
 	suite.Run(t, new(UserServiceTestSuite))
-	suite.Run(t, new(PostServiceTestSuite))
 }

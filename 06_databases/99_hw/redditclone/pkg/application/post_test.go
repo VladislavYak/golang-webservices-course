@@ -52,7 +52,7 @@ func (s *PostServiceTestSuite) TestCreate() {
 
 		gomock.InOrder(
 			s.PostMockRepo.EXPECT().AddPost(s.ctx, myPost).Return(postAfterAddPost, nil),
-			s.PostMockRepo.EXPECT().Upvote(s.ctx, myId).Return(postAfterUpvote, nil),
+			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, 1).Return(postAfterUpvote, nil),
 			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(postAfterUpdateScore, nil),
 		)
 
@@ -66,7 +66,7 @@ func (s *PostServiceTestSuite) TestCreate() {
 	t.Run("error on AddPost - no further calls", func(t *testing.T) {
 
 		s.PostMockRepo.EXPECT().AddPost(s.ctx, myPost).Return(nil, mockErr).Times(1)
-		s.PostMockRepo.EXPECT().Upvote(gomock.Any(), gomock.Any()).Times(0)
+		s.PostMockRepo.EXPECT().Vote(gomock.Any(), gomock.Any(), 1).Times(0)
 		s.PostMockRepo.EXPECT().UpdateScore(gomock.Any(), gomock.Any()).Times(0)
 
 		returnedPost, err := s.postImpl.Create(s.ctx, myPost)
@@ -81,7 +81,7 @@ func (s *PostServiceTestSuite) TestCreate() {
 
 		gomock.InOrder(
 			s.PostMockRepo.EXPECT().AddPost(s.ctx, myPost).Return(postAfterAddPost, nil).Times(1),
-			s.PostMockRepo.EXPECT().Upvote(s.ctx, myId).Return(nil, mockErr).Times(1),
+			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, 1).Return(nil, mockErr).Times(1),
 		)
 
 		s.PostMockRepo.EXPECT().UpdateScore(gomock.Any(), gomock.Any()).Times(0) // Не вызван
@@ -96,7 +96,7 @@ func (s *PostServiceTestSuite) TestCreate() {
 
 		gomock.InOrder(
 			s.PostMockRepo.EXPECT().AddPost(s.ctx, myPost).Return(postAfterAddPost, nil).Times(1),
-			s.PostMockRepo.EXPECT().Upvote(s.ctx, myId).Return(postAfterUpvote, nil).Times(1),
+			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, 1).Return(postAfterUpvote, nil).Times(1),
 			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(nil, mockErr).Times(1),
 		)
 		returnedPost, err := s.postImpl.Create(s.ctx, myPost)
@@ -105,6 +105,380 @@ func (s *PostServiceTestSuite) TestCreate() {
 		s.ErrorIs(err, mockErr)
 
 	})
+
+}
+
+func (s *PostServiceTestSuite) TestGetAll() {
+	t := s.T()
+
+	tests := []struct {
+		name    string
+		setup   func()
+		call    func() (interface{}, error)
+		wantErr bool
+		check   func(result interface{}, err error)
+	}{
+		{
+			name: "GetAll - success",
+			setup: func() {
+				s.PostMockRepo.EXPECT().GetAllPosts(s.ctx).Return([]*post.Post{{Id: "1"}}, nil)
+			},
+			call: func() (interface{}, error) {
+				return s.postImpl.GetAll(s.ctx)
+			},
+			wantErr: false,
+		},
+		{
+			name: "GetAll - error",
+			setup: func() {
+				s.PostMockRepo.EXPECT().GetAllPosts(s.ctx).Return(nil, errors.New("db"))
+			},
+			call: func() (interface{}, error) {
+				return s.postImpl.GetAll(s.ctx)
+			},
+			wantErr: true,
+			check: func(_ interface{}, err error) {
+				s.ErrorContains(err, "GetAll")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup()
+			result, err := tt.call()
+			if tt.wantErr {
+				s.Require().Error(err)
+			} else {
+				s.Require().NoError(err)
+			}
+			if tt.check != nil {
+				tt.check(result, err)
+			}
+		})
+	}
+}
+
+func (s *PostServiceTestSuite) TestGetByID() {
+	t := s.T()
+
+	tests := []struct {
+		name    string
+		id      string
+		setup   func(id string)
+		call    func(id string) (interface{}, error)
+		wantErr bool
+		check   func(result interface{}, err error)
+	}{
+		{
+			name: "GetByID - success",
+			setup: func(id string) {
+				s.PostMockRepo.EXPECT().GetPostByID(s.ctx, id).Return(&post.Post{Id: "123"}, nil)
+			},
+			call: func(id string) (interface{}, error) {
+				return s.postImpl.GetByID(s.ctx, id)
+			},
+			wantErr: false,
+		},
+		{
+			name: "GetByID - error",
+			setup: func(id string) {
+				s.PostMockRepo.EXPECT().GetPostByID(s.ctx, id).Return(nil, errors.New("db"))
+			},
+			call: func(id string) (interface{}, error) {
+				return s.postImpl.GetByID(s.ctx, id)
+			},
+			wantErr: true,
+			check: func(_ interface{}, err error) {
+				s.ErrorContains(err, "GetByID")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup(tt.id)
+			result, err := tt.call(tt.id)
+			if tt.wantErr {
+				s.Require().Error(err)
+			} else {
+				s.Require().NoError(err)
+			}
+			if tt.check != nil {
+				tt.check(result, err)
+			}
+		})
+	}
+
+}
+
+func (s *PostServiceTestSuite) TestGetPostsByCategoryName() {
+	t := s.T()
+
+	tests := []struct {
+		name    string
+		id      string
+		setup   func(id string)
+		call    func(id string) (interface{}, error)
+		wantErr bool
+		check   func(result interface{}, err error)
+	}{
+		{
+			name: "GetPostsByCategoryName - success",
+			setup: func(id string) {
+				s.PostMockRepo.EXPECT().GetPostsByCategoryName(s.ctx, id).Return([]*post.Post{{Id: "123"}}, nil)
+			},
+			call: func(id string) (interface{}, error) {
+				return s.postImpl.GetPostsByCategoryName(s.ctx, id)
+			},
+			wantErr: false,
+		},
+		{
+			name: "GetPostsByCategoryName - error",
+			setup: func(id string) {
+				s.PostMockRepo.EXPECT().GetPostsByCategoryName(s.ctx, id).Return(nil, errors.New("db"))
+			},
+			call: func(id string) (interface{}, error) {
+				return s.postImpl.GetPostsByCategoryName(s.ctx, id)
+			},
+			wantErr: true,
+			check: func(_ interface{}, err error) {
+				s.ErrorContains(err, "GetPostsByCategoryName")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup(tt.id)
+			result, err := tt.call(tt.id)
+			if tt.wantErr {
+				s.Require().Error(err)
+			} else {
+				s.Require().NoError(err)
+			}
+			if tt.check != nil {
+				tt.check(result, err)
+			}
+		})
+	}
+
+}
+
+func (s *PostServiceTestSuite) TestGetPostsByUsername() {
+	t := s.T()
+
+	tests := []struct {
+		name    string
+		id      string
+		setup   func(id string)
+		call    func(id string) (interface{}, error)
+		wantErr bool
+		check   func(result interface{}, err error)
+	}{
+		{
+			name: "GetPostsByUsername - success",
+			setup: func(id string) {
+				s.PostMockRepo.EXPECT().GetPostsByUsername(s.ctx, id).Return([]*post.Post{{Id: "123"}}, nil)
+			},
+			call: func(id string) (interface{}, error) {
+				return s.postImpl.GetPostsByUsername(s.ctx, id)
+			},
+			wantErr: false,
+		},
+		{
+			name: "GetPostsByUsername - error",
+			setup: func(id string) {
+				s.PostMockRepo.EXPECT().GetPostsByUsername(s.ctx, id).Return(nil, errors.New("db"))
+			},
+			call: func(id string) (interface{}, error) {
+				return s.postImpl.GetPostsByUsername(s.ctx, id)
+			},
+			wantErr: true,
+			check: func(_ interface{}, err error) {
+				s.ErrorContains(err, "GetPostsByUsername")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup(tt.id)
+			result, err := tt.call(tt.id)
+			if tt.wantErr {
+				s.Require().Error(err)
+			} else {
+				s.Require().NoError(err)
+			}
+			if tt.check != nil {
+				tt.check(result, err)
+			}
+		})
+	}
+
+}
+
+func (s *PostServiceTestSuite) TestUpvote() {
+	t := s.T()
+
+	myUsername := "testovTest"
+	myId := "1123"
+	myUser := user.NewUser(myUsername)
+	myPost := postWithId(post.NewPost("music", "text", "", "boobar", "Boobarov", *myUser), myId)
+	myVote := post.Vote{User: myUsername, VoteScore: 1}
+	myScore := 1
+
+	postAfterUpvote := postWithVote(myPost, &myVote)
+	postAfterUpdateScore := postWithScore(postAfterUpvote, myScore)
+
+	mockErr := errors.New("some error")
+
+	t.Run("happy path", func(t *testing.T) {
+
+		gomock.InOrder(
+			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, 1).Return(postAfterUpvote, nil),
+			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(postAfterUpdateScore, nil),
+		)
+
+		returnedPost, err := s.postImpl.Upvote(s.ctx, myId)
+
+		s.Require().NoError(err)
+		s.Assert().Equal(postAfterUpdateScore, returnedPost)
+		s.Assert().Equal(1, returnedPost.Score)
+	})
+
+	t.Run("error on Vote - no further calls", func(t *testing.T) {
+
+		s.PostMockRepo.EXPECT().Vote(gomock.Any(), gomock.Any(), 1).Return(nil, mockErr).Times(1)
+		s.PostMockRepo.EXPECT().UpdateScore(gomock.Any(), gomock.Any()).Times(0)
+
+		returnedPost, err := s.postImpl.Upvote(s.ctx, myId)
+
+		s.Require().Error(err)
+		s.Assert().Nil(returnedPost)
+		s.ErrorIs(err, mockErr)
+
+	})
+
+	t.Run("error on UpdateScore", func(t *testing.T) {
+
+		gomock.InOrder(
+			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, 1).Return(postAfterUpvote, nil).Times(1),
+			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(nil, mockErr).Times(1),
+		)
+		returnedPost, err := s.postImpl.Upvote(s.ctx, myId)
+		s.Require().Error(err)
+		s.Assert().Nil(returnedPost)
+		s.ErrorIs(err, mockErr)
+
+	})
+
+}
+
+func (s *PostServiceTestSuite) TestDownvote() {
+	t := s.T()
+
+	myUsername := "testovTest"
+	myId := "1123"
+	myUser := user.NewUser(myUsername)
+	myPost := postWithId(post.NewPost("music", "text", "", "boobar", "Boobarov", *myUser), myId)
+	myVote := post.Vote{User: myUsername, VoteScore: -1}
+	myScore := -1
+
+	postAfterDownvote := postWithVote(myPost, &myVote)
+	postAfterUpdateScore := postWithScore(postAfterDownvote, myScore)
+
+	mockErr := errors.New("some error")
+
+	t.Run("happy path", func(t *testing.T) {
+
+		gomock.InOrder(
+			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, -1).Return(postAfterDownvote, nil),
+			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(postAfterUpdateScore, nil),
+		)
+
+		returnedPost, err := s.postImpl.Downvote(s.ctx, myId)
+
+		s.Require().NoError(err)
+		s.Assert().Equal(postAfterUpdateScore, returnedPost)
+		s.Assert().Equal(-1, returnedPost.Score)
+	})
+
+	t.Run("error on Vote - no further calls", func(t *testing.T) {
+
+		s.PostMockRepo.EXPECT().Vote(gomock.Any(), gomock.Any(), -1).Return(nil, mockErr).Times(1)
+		s.PostMockRepo.EXPECT().UpdateScore(gomock.Any(), gomock.Any()).Times(0)
+
+		returnedPost, err := s.postImpl.Downvote(s.ctx, myId)
+
+		s.Require().Error(err)
+		s.Assert().Nil(returnedPost)
+		s.ErrorIs(err, mockErr)
+
+	})
+
+	t.Run("error on UpdateScore", func(t *testing.T) {
+
+		gomock.InOrder(
+			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, -1).Return(postAfterDownvote, nil).Times(1),
+			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(nil, mockErr).Times(1),
+		)
+		returnedPost, err := s.postImpl.Downvote(s.ctx, myId)
+		s.Require().Error(err)
+		s.Assert().Nil(returnedPost)
+		s.ErrorIs(err, mockErr)
+
+	})
+
+}
+
+func (s *PostServiceTestSuite) TestUnvote() {
+	t := s.T()
+
+	myUsername := "testovTest"
+	myId := "1123"
+	myUser := user.NewUser(myUsername)
+	myPost := postWithId(post.NewPost("music", "text", "", "boobar", "Boobarov", *myUser), myId)
+	myVote := post.Vote{User: myUsername, VoteScore: -1}
+	myScore := -1
+
+	postAfterDownvote := postWithVote(myPost, &myVote)
+	postAfterUpdateScore := postWithScore(postAfterDownvote, myScore)
+
+	mockErr := errors.New("some error")
+
+	t.Run("happy path", func(t *testing.T) {
+
+		gomock.InOrder(
+			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, -1).Return(postAfterDownvote, nil),
+			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(postAfterUpdateScore, nil),
+		)
+
+		returnedPost, err := s.postImpl.Downvote(s.ctx, myId)
+
+		s.Require().NoError(err)
+		s.Assert().Equal(postAfterUpdateScore, returnedPost)
+		s.Assert().Equal(-1, returnedPost.Score)
+	})
+
+	t.Run("error on Vote - no further calls", func(t *testing.T) {
+
+		s.PostMockRepo.EXPECT().Vote(gomock.Any(), gomock.Any(), -1).Return(nil, mockErr).Times(1)
+		s.PostMockRepo.EXPECT().UpdateScore(gomock.Any(), gomock.Any()).Times(0)
+
+		returnedPost, err := s.postImpl.Downvote(s.ctx, myId)
+
+		s.Require().Error(err)
+		s.Assert().Nil(returnedPost)
+		s.ErrorIs(err, mockErr)
+
+	})
+
+	// add test when updateSCore fails
 
 }
 
@@ -128,4 +502,8 @@ func postWithScore(pst *post.Post, score int) *post.Post {
 	clone.Score = score
 
 	return &clone
+}
+
+func TestPostServiceTestSuite(t *testing.T) {
+	suite.Run(t, new(PostServiceTestSuite))
 }

@@ -17,7 +17,7 @@ type PostInterface interface {
 	GetAll(context.Context) ([]*postP.Post, error)
 	GetByID(context.Context, string) (*postP.Post, error)
 	GetPostsByCategoryName(context.Context, string) ([]*postP.Post, error)
-	GetByUsername(context.Context, string) ([]*postP.Post, error)
+	GetPostsByUsername(context.Context, string) ([]*postP.Post, error)
 	Upvote(context.Context, string) (*postP.Post, error)
 	Downvote(context.Context, string) (*postP.Post, error)
 	Unvote(context.Context, string) (*postP.Post, error)
@@ -43,7 +43,7 @@ func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, e
 		return nil, errors.Wrap(err, op)
 	}
 
-	returnedPost, err = p.repo.Upvote(ctx, returnedPost.Id)
+	returnedPost, err = p.repo.Vote(ctx, returnedPost.Id, 1)
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
@@ -56,11 +56,12 @@ func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, e
 	return returnedPost, err
 }
 
-// yakovlev: тут возвращать delete надо
-// yakovlev: в целом этот метод не исползуется пока что, на фронте тупо нет кнопки для удаления. Надо через постман потестить...
-func (p *PostImpl) Delete(ctx context.Context, s string) (*postP.Post, error) {
+// yakovlev: 401 Unauthorized надо когда удаляешь чужое, 404 Not Found когда удаляешь то, чего нет 400 Bad Request когда удаляешь чето странное
+func (p *PostImpl) Delete(ctx context.Context, id string) (*postP.Post, error) {
 	const op = "Delete"
-	returnedPost, err := p.repo.DeletePost(ctx, s)
+
+	// сейчас тут можно удалить чужое, надо проверять, что удаляем не чужое
+	returnedPost, err := p.repo.DeletePost(ctx, id)
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
@@ -72,7 +73,7 @@ func (p *PostImpl) Delete(ctx context.Context, s string) (*postP.Post, error) {
 
 }
 
-// yakovlev: тту по идее поитенр не нужен, но его и из интерфейса надо выпилить бы
+// yakovlev: тту по идее поитенр не нужен, но его и из интерфейса надо выпилить бы (?)
 func (p *PostImpl) GetAll(ctx context.Context) ([]*postP.Post, error) {
 	const op = "GetAll"
 
@@ -110,8 +111,8 @@ func (p *PostImpl) GetPostsByCategoryName(ctx context.Context, s string) ([]*pos
 
 }
 
-func (p *PostImpl) GetByUsername(ctx context.Context, s string) ([]*postP.Post, error) {
-	const op = "GetByUsername"
+func (p *PostImpl) GetPostsByUsername(ctx context.Context, s string) ([]*postP.Post, error) {
+	const op = "GetPostsByUsername"
 	returnedPost, err := p.repo.GetPostsByUsername(ctx, s)
 
 	if err != nil {
@@ -121,11 +122,13 @@ func (p *PostImpl) GetByUsername(ctx context.Context, s string) ([]*postP.Post, 
 	return returnedPost, err
 }
 
-// fix updatescore
 func (p *PostImpl) Upvote(ctx context.Context, PostId string) (*postP.Post, error) {
-	const op = "Upvote"
+	const (
+		op       = "Upvote"
+		voteSign = 1
+	)
 
-	returnedPost, err := p.repo.Upvote(ctx, PostId)
+	returnedPost, err := p.repo.Vote(ctx, PostId, voteSign)
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
@@ -140,10 +143,13 @@ func (p *PostImpl) Upvote(ctx context.Context, PostId string) (*postP.Post, erro
 	return returnedPost, err
 }
 
-// fix updatescore
 func (p *PostImpl) Downvote(ctx context.Context, PostId string) (*postP.Post, error) {
-	const op = "Downvote"
-	returnedPost, err := p.repo.Downvote(ctx, PostId)
+	const (
+		op       = "Downvote"
+		voteSign = -1
+	)
+
+	returnedPost, err := p.repo.Vote(ctx, PostId, voteSign)
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
