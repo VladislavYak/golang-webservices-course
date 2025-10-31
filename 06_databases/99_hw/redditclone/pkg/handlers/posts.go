@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
@@ -86,8 +86,6 @@ func (ph *PostHandler) PostPost(c echo.Context) error {
 		c.String(http.StatusBadRequest, err.Error())
 	}
 
-	fmt.Println("Username (handler)", ctx.Value("Username"))
-	fmt.Println("UserID (handler)", ctx.Value("UserID"))
 	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, *user.NewUser(claims.Login).WithID(claims.UserID))
 
 	postReturned, err := ph.Implementation.Create(ctx, Post)
@@ -110,7 +108,11 @@ func (ph *PostHandler) DeletePost(c echo.Context) error {
 	ctx = context.WithValue(ctx, "Username", claims.Login)
 	ctx = context.WithValue(ctx, "UserID", claims.UserID)
 
-	deletedPost, err := ph.Implementation.Delete(ctx, id)
+	deletedPost, err := ph.Implementation.Delete(ctx, id, claims.UserID)
+
+	if errors.Is(err, post.DifferentPostOwnerError) {
+		return echo.NewHTTPError(http.StatusForbidden, err)
+	}
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}

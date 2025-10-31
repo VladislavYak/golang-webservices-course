@@ -454,11 +454,11 @@ func (s *PostServiceTestSuite) TestUnvote() {
 	t.Run("happy path", func(t *testing.T) {
 
 		gomock.InOrder(
-			s.PostMockRepo.EXPECT().Vote(s.ctx, myId, -1).Return(postAfterDownvote, nil),
+			s.PostMockRepo.EXPECT().Unvote(s.ctx, myId).Return(postAfterDownvote, nil),
 			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(postAfterUpdateScore, nil),
 		)
 
-		returnedPost, err := s.postImpl.Downvote(s.ctx, myId)
+		returnedPost, err := s.postImpl.Unvote(s.ctx, myId)
 
 		s.Require().NoError(err)
 		s.Assert().Equal(postAfterUpdateScore, returnedPost)
@@ -467,10 +467,10 @@ func (s *PostServiceTestSuite) TestUnvote() {
 
 	t.Run("error on Vote - no further calls", func(t *testing.T) {
 
-		s.PostMockRepo.EXPECT().Vote(gomock.Any(), gomock.Any(), -1).Return(nil, mockErr).Times(1)
+		s.PostMockRepo.EXPECT().Unvote(gomock.Any(), gomock.Any()).Return(nil, mockErr).Times(1)
 		s.PostMockRepo.EXPECT().UpdateScore(gomock.Any(), gomock.Any()).Times(0)
 
-		returnedPost, err := s.postImpl.Downvote(s.ctx, myId)
+		returnedPost, err := s.postImpl.Unvote(s.ctx, myId)
 
 		s.Require().Error(err)
 		s.Assert().Nil(returnedPost)
@@ -478,7 +478,86 @@ func (s *PostServiceTestSuite) TestUnvote() {
 
 	})
 
-	// add test when updateSCore fails
+	t.Run("error on UpdateScore", func(t *testing.T) {
+
+		gomock.InOrder(
+			s.PostMockRepo.EXPECT().Unvote(s.ctx, myId).Return(postAfterDownvote, nil).Times(1),
+			s.PostMockRepo.EXPECT().UpdateScore(s.ctx, myId).Return(nil, mockErr).Times(1),
+		)
+		returnedPost, err := s.postImpl.Unvote(s.ctx, myId)
+		s.Require().Error(err)
+		s.Assert().Nil(returnedPost)
+		s.ErrorIs(err, mockErr)
+
+	})
+
+}
+
+func (s *PostServiceTestSuite) TestDelete() {
+	t := s.T()
+
+	myUsername := "testovTest"
+	myId := "1123"
+	userID := "boobar"
+	myUser := user.NewUser(myUsername)
+	myUser.UserID = userID
+
+	anotherUser := user.NewUser("another")
+	anotherUser.UserID = userID
+	// myPost := postWithId(post.NewPost("music", "text", "", "boobar", "Boobarov", *myUser), myId)
+
+	toBeDeletedPost := post.NewPost("music", "text", "", "boobatbar", "youtube", *myUser)
+	returnedPostGetPostById := post.NewPost("music", "text", "", "boobatbar", "youtube", *anotherUser)
+
+	mockErr := errors.New("some error")
+	t.Run("happy path", func(t *testing.T) {
+
+		gomock.InOrder(
+			s.PostMockRepo.EXPECT().GetPostByID(s.ctx, myId).Return(toBeDeletedPost, nil),
+			s.PostMockRepo.EXPECT().DeletePost(s.ctx, myId).Return(toBeDeletedPost, nil),
+		)
+
+		_, err := s.postImpl.Delete(s.ctx, myId, myUser.UserID)
+
+		s.Require().NoError(err)
+
+	})
+
+	t.Run("error on GetPostById - differentPostOwnerError", func(t *testing.T) {
+		returnedPostGetPostById.Author.UserID = "invalid_user_id"
+
+		s.PostMockRepo.EXPECT().GetPostByID(s.ctx, myId).Return(returnedPostGetPostById, nil).Times(1)
+		s.PostMockRepo.EXPECT().DeletePost(s.ctx, myId).Times(0)
+
+		pp, err := s.postImpl.Delete(s.ctx, myId, myUser.UserID)
+
+		s.ErrorIs(err, post.DifferentPostOwnerError)
+		s.Nil(pp)
+	})
+
+	t.Run("error on GetPostById", func(t *testing.T) {
+		returnedPostGetPostById.Author.UserID = "invalid_user_id"
+
+		s.PostMockRepo.EXPECT().GetPostByID(s.ctx, myId).Return(nil, mockErr)
+		s.PostMockRepo.EXPECT().DeletePost(s.ctx, myId).Times(0)
+
+		pp, err := s.postImpl.Delete(s.ctx, myId, myUser.UserID)
+
+		s.ErrorIs(err, mockErr)
+		s.Nil(pp)
+	})
+
+	t.Run("error on Delete", func(t *testing.T) {
+		returnedPostGetPostById.Author.UserID = "invalid_user_id"
+
+		s.PostMockRepo.EXPECT().GetPostByID(s.ctx, myId).Return(toBeDeletedPost, nil).Times(1)
+		s.PostMockRepo.EXPECT().DeletePost(s.ctx, myId).Return(nil, mockErr).Times(1)
+
+		pp, err := s.postImpl.Delete(s.ctx, myId, myUser.UserID)
+
+		s.ErrorIs(err, mockErr)
+		s.Nil(pp)
+	})
 
 }
 

@@ -2,8 +2,8 @@ package application
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	postP "github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/pkg/errors"
 )
@@ -13,7 +13,7 @@ import (
 
 type PostInterface interface {
 	Create(context.Context, *postP.Post) (*postP.Post, error)
-	Delete(context.Context, string) (*postP.Post, error)
+	Delete(context.Context, string, string) (*postP.Post, error)
 	GetAll(context.Context) ([]*postP.Post, error)
 	GetByID(context.Context, string) (*postP.Post, error)
 	GetPostsByCategoryName(context.Context, string) ([]*postP.Post, error)
@@ -56,18 +56,24 @@ func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, e
 	return returnedPost, err
 }
 
-// yakovlev: 401 Unauthorized надо когда удаляешь чужое, 404 Not Found когда удаляешь то, чего нет 400 Bad Request когда удаляешь чето странное
-func (p *PostImpl) Delete(ctx context.Context, id string) (*postP.Post, error) {
+func (p *PostImpl) Delete(ctx context.Context, id string, userId string) (*postP.Post, error) {
 	const op = "Delete"
 
-	// сейчас тут можно удалить чужое, надо проверять, что удаляем не чужое
-	returnedPost, err := p.repo.DeletePost(ctx, id)
+	ppost, err := p.repo.GetPostByID(ctx, id)
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
-	fmt.Println("returnedPost", returnedPost)
+	if ppost.Author.UserID != userId {
+		return nil, post.DifferentPostOwnerError
+	}
+
+	returnedPost, err := p.repo.DeletePost(ctx, id)
+
+	if err != nil {
+		return nil, errors.Wrap(err, op)
+	}
 
 	return returnedPost, err
 
