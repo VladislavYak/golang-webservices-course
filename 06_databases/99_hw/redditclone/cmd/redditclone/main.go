@@ -15,9 +15,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-// yakovlev: add proper error handling
 // yakovlev: add proper logging
-// yakovlev: add proper concurrency handling using mutexes
 const (
 	api = "/api"
 )

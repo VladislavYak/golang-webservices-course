@@ -59,6 +59,7 @@ func (p *PostImpl) Create(ctx context.Context, Post *postP.Post) (*postP.Post, e
 func (p *PostImpl) Delete(ctx context.Context, id string, userId string) (*postP.Post, error) {
 	const op = "Delete"
 
+	// yakovlev: in highload this could be raced condition
 	ppost, err := p.repo.GetPostByID(ctx, id)
 
 	if err != nil {
@@ -79,7 +80,6 @@ func (p *PostImpl) Delete(ctx context.Context, id string, userId string) (*postP
 
 }
 
-// yakovlev: тту по идее поитенр не нужен, но его и из интерфейса надо выпилить бы (?)
 func (p *PostImpl) GetAll(ctx context.Context) ([]*postP.Post, error) {
 	const op = "GetAll"
 
@@ -104,7 +104,6 @@ func (p *PostImpl) GetByID(ctx context.Context, s string) (*postP.Post, error) {
 
 }
 
-// yakovlev: тту по идее поитенр не нужен, но его и из интерфейса надо выпилить бы
 func (p *PostImpl) GetPostsByCategoryName(ctx context.Context, s string) ([]*postP.Post, error) {
 	const op = "GetPostsByCategoryName"
 

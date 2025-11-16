@@ -90,8 +90,6 @@ func (pp *PostRepo) DeletePost(ctx context.Context, Id string) (*post.Post, erro
 
 }
 
-// yakovlev: add proper error handling
-
 func (pp *PostRepo) Vote(ctx context.Context, PostId string, Vote int) (*post.Post, error) {
 	return nil, nil
 }

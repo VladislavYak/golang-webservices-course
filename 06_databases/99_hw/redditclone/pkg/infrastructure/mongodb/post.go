@@ -132,12 +132,12 @@ func (pp *PostRepoMongo) GetPostsByUsername(ctx context.Context, Username string
 	cursor, err := pp.Collection.Find(ctx, bson.M{"author.username": Username})
 
 	if err != nil {
-		panic(err)
+		return nil, errors.New("cannot find username")
 	}
 
 	var postsTmp []*postTmp
 	if err = cursor.All(ctx, &postsTmp); err != nil {
-		panic(err)
+		return nil, errors.New("cannot get all posts for user")
 	}
 
 	var Posts []*post.Post
@@ -188,6 +188,7 @@ func (pp *PostRepoMongo) AddPost(ctx context.Context, Post *post.Post) (*post.Po
 	return ReturnedPost, nil
 }
 
+// yakovlev: надо фиксить
 func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post, error) {
 	const op = "DeletePost"
 
@@ -207,157 +208,6 @@ func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post,
 	// return nil, errors.New("this id doesnot exist")
 
 }
-
-// func (pp *PostRepoMongo) Upvote(ctx context.Context, PostID string) (*post.Post, error) {
-// 	const op = "Upvote"
-// 	userID, ok := ctx.Value("UserID").(string)
-// 	if !ok {
-// 		return nil, errors.New("cannot cast userID to string")
-// 	}
-// 	// Convert postID to ObjectID
-// 	objID, err := bson.ObjectIDFromHex(PostID)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, op)
-// 	}
-// 	filter := bson.M{
-// 		"_id": objID,
-// 	}
-
-// 	// Aggregation pipeline для обновления votes
-// 	update := bson.A{
-// 		bson.M{
-// 			"$set": bson.M{
-// 				"votes": bson.M{
-// 					"$cond": bson.M{
-// 						"if": bson.M{
-// 							"$in": []interface{}{userID, "$votes.user"},
-// 						},
-// 						"then": bson.M{
-// 							"$map": bson.M{
-// 								"input": "$votes",
-// 								"as":    "vote",
-// 								"in": bson.M{
-// 									"$cond": bson.M{
-// 										"if": bson.M{"$eq": []interface{}{"$$vote.user", userID}},
-// 										"then": bson.M{
-// 											"user": "$$vote.user",
-// 											"vote": 1,
-// 										},
-// 										"else": "$$vote",
-// 									},
-// 								},
-// 							},
-// 						},
-// 						"else": bson.M{
-// 							"$concatArrays": []interface{}{
-// 								"$votes",
-// 								[]bson.M{{
-// 									"user": userID,
-// 									"vote": 1,
-// 								}},
-// 							},
-// 						},
-// 					},
-// 				},
-// 			},
-// 		},
-// 	}
-
-// 	// Опции для возврата обновлённого документа
-// 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
-
-// 	// Выполнение атомарного обновления
-// 	var tmpPost postTmp
-// 	err = pp.Collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&tmpPost)
-
-// 	ReturnedPost := tmpPost.ToPost()
-
-// 	if err == mongo.ErrNoDocuments {
-// 		return nil, domain.PostNotFoundError
-// 	}
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, op)
-// 	}
-
-// 	return ReturnedPost, nil
-// }
-
-// // yakovlev: this is almost full copy of Upvote, but lazy now
-// func (pp *PostRepoMongo) Downvote(ctx context.Context, PostID string) (*post.Post, error) {
-// 	const op = "Downvote"
-// 	userID, ok := ctx.Value("UserID").(string)
-// 	if !ok {
-// 		return nil, errors.New("cannot cast userID to string")
-// 	}
-
-// 	// Convert postID to ObjectID
-// 	objID, err := bson.ObjectIDFromHex(PostID)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, op)
-// 	}
-// 	filter := bson.M{
-// 		"_id": objID,
-// 	}
-
-// 	// Aggregation pipeline для обновления votes
-// 	update := bson.A{
-// 		bson.M{
-// 			"$set": bson.M{
-// 				"votes": bson.M{
-// 					"$cond": bson.M{
-// 						"if": bson.M{
-// 							"$in": []interface{}{userID, "$votes.user"},
-// 						},
-// 						"then": bson.M{
-// 							"$map": bson.M{
-// 								"input": "$votes",
-// 								"as":    "vote",
-// 								"in": bson.M{
-// 									"$cond": bson.M{
-// 										"if": bson.M{"$eq": []interface{}{"$$vote.user", userID}},
-// 										"then": bson.M{
-// 											"user": "$$vote.user",
-// 											"vote": -1,
-// 										},
-// 										"else": "$$vote",
-// 									},
-// 								},
-// 							},
-// 						},
-// 						"else": bson.M{
-// 							"$concatArrays": []interface{}{
-// 								"$votes",
-// 								[]bson.M{{
-// 									"user": userID,
-// 									"vote": 1,
-// 								}},
-// 							},
-// 						},
-// 					},
-// 				},
-// 			},
-// 		},
-// 	}
-
-// 	// Опции для возврата обновлённого документа
-// 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
-
-// 	// Выполнение атомарного обновления
-// 	var tmpPost postTmp
-// 	err = pp.Collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&tmpPost)
-
-// 	if err == mongo.ErrNoDocuments {
-// 		return nil, fmt.Errorf("post with ID %s not found", PostID)
-// 	}
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, op)
-// 	}
-
-// 	ReturnedPost := tmpPost.ToPost()
-
-// 	return ReturnedPost, nil
-
-// }
 
 func (pp *PostRepoMongo) Vote(ctx context.Context, PostID string, vote int) (*post.Post, error) {
 	const op = "Vote"
