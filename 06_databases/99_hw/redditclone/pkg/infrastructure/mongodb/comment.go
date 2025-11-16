@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/VladislavYak/redditclone/pkg/domain"
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
+	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/go-faster/errors"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -52,7 +52,7 @@ func (cr *CommentRepoMongo) AddComment(ctx context.Context, Id string, Comment *
 	}
 
 	if result.MatchedCount == 0 {
-		return domain.PostNotFoundError
+		return post.PostNotFoundError
 	}
 
 	return nil
@@ -63,7 +63,7 @@ func (cr *CommentRepoMongo) DeleteComment(ctx context.Context, Id string, Commen
 
 	objID, err := bson.ObjectIDFromHex(Id)
 	if err != nil {
-		return fmt.Errorf("invalid post ID: %w", err)
+		return post.InvalidPostIdError
 	}
 
 	// Define the update operation using $pull
@@ -85,7 +85,7 @@ func (cr *CommentRepoMongo) DeleteComment(ctx context.Context, Id string, Commen
 		return fmt.Errorf("failed to delete comment: %w", err)
 	}
 	if result.MatchedCount == 0 {
-		return domain.PostNotFoundError
+		return post.PostNotFoundError
 	}
 	if result.ModifiedCount == 0 {
 		return comment.CommentNotFoundError

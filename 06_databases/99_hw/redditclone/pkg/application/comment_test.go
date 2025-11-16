@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/VladislavYak/redditclone/mocks"
-	"github.com/VladislavYak/redditclone/pkg/domain"
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/go-faster/errors"
@@ -74,7 +73,7 @@ func (s *CommentServiceTestSuite) TestAddComment() {
 
 		s.CommentMockRepo.EXPECT().
 			AddComment(s.ctx, postID, comment).
-			Return(domain.PostNotFoundError)
+			Return(post.PostNotFoundError)
 
 		result, err := s.commentImpl.AddComment(s.ctx, postID, comment)
 
@@ -156,7 +155,7 @@ func (s *CommentServiceTestSuite) TestDeleteComment() {
 
 		s.PostMockRepo.EXPECT().
 			GetPostByID(s.ctx, postID).
-			Return(nil, domain.PostNotFoundError)
+			Return(nil, post.PostNotFoundError)
 
 		result, err := s.commentImpl.DeleteComment(s.ctx, postID, commentID)
 

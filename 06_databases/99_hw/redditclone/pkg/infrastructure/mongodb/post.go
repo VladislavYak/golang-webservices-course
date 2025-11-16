@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/VladislavYak/redditclone/pkg/domain"
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
@@ -68,7 +67,6 @@ func (pt *postTmp) ToPost() *post.Post {
 
 func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) {
 	const op = "GetAllPosts"
-	fmt.Println("inside GetAllPosts")
 	cursor, err := pp.Collection.Find(context.TODO(), bson.D{})
 
 	if err != nil {
@@ -117,8 +115,6 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 	const op = "GetPostByID"
 	value, _ := bson.ObjectIDFromHex(ID)
 
-	fmt.Println("GetPostByID, value", value)
-
 	filter := bson.M{"_id": value}
 
 	var postTmp *postTmp
@@ -127,11 +123,7 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 		return nil, errors.Wrap(err, op)
 	}
 
-	fmt.Printf("Updated Post:\n%+v\n", postTmp)
-
 	Post := postTmp.ToPost()
-
-	fmt.Println("Post GetPostByID", Post)
 
 	return Post, nil
 }
@@ -193,10 +185,6 @@ func (pp *PostRepoMongo) AddPost(ctx context.Context, Post *post.Post) (*post.Po
 		return nil, errors.New("cannot convert id")
 	}
 
-	fmt.Println("ReturnedPost (AddPost)", ReturnedPost.Id)
-
-	// yakovlev: logging?
-	fmt.Println("inserted id", result.InsertedID)
 	return ReturnedPost, nil
 }
 
@@ -430,7 +418,7 @@ func (pp *PostRepoMongo) Vote(ctx context.Context, PostID string, vote int) (*po
 	err = pp.Collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&tmpPost)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, domain.PostNotFoundError
+			return nil, post.PostNotFoundError
 		}
 		return nil, errors.Wrap(err, op)
 	}
@@ -447,7 +435,7 @@ func (pp *PostRepoMongo) Unvote(ctx context.Context, PostId string) (*post.Post,
 
 	objID, err := bson.ObjectIDFromHex(PostId)
 	if err != nil {
-		return nil, fmt.Errorf("invalid post ID: %w", err)
+		return nil, post.InvalidPostIdError
 	}
 	filter := bson.M{
 		"_id": objID,
