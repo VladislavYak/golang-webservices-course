@@ -5,8 +5,8 @@ import (
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
 
+	customMiddleware "github.com/VladislavYak/redditclone/internal/middleware"
 	"github.com/VladislavYak/redditclone/pkg/domain/auth"
-	customMiddleware "github.com/VladislavYak/redditclone/pkg/handlers/middleware"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/mongodb"
 	"github.com/VladislavYak/redditclone/pkg/infrastructure/postgres"
 	jwt "github.com/golang-jwt/jwt/v5"
