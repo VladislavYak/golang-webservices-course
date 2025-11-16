@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/VladislavYak/redditclone/mocks"
+	"github.com/VladislavYak/redditclone/internal/mocks"
 	"github.com/VladislavYak/redditclone/pkg/domain/comment"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/go-faster/errors"
