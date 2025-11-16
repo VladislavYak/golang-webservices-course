@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
+	"github.com/VladislavYak/redditclone/pkg/domain/auth"
 	"github.com/labstack/echo/v4"
 )
 
@@ -47,6 +48,11 @@ func (uh *UserHandler) Register(c echo.Context) error {
 
 	token, err := uh.Impl.Register(c.Request().Context(), form.Username, form.Password)
 	if err != nil {
+
+		if ve, ok := auth.AsValidationError(err); ok {
+			return c.JSON(http.StatusUnprocessableEntity, ve)
+		}
+
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 

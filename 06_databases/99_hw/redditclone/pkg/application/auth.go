@@ -17,11 +17,9 @@ type AuthImpl struct {
 }
 
 func NewAuthImpl(repo auth.AuthRepository) *AuthImpl {
-	// yakovlev: JWTSecret which?
 	return &AuthImpl{ar: repo}
 }
 
-// need to be moved to auth
 func (ai *AuthImpl) ValidateSession(ctx context.Context, Token string, ExpiresAt time.Time) error {
 	const op = "ValidateSession"
 	err := ai.ar.ValidateJWT(ctx, Token, ExpiresAt)

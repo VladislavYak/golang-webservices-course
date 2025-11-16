@@ -34,8 +34,15 @@ func main() {
 
 	// better user DI somehow here
 
-	client, _ := mongodb.NewMongoClient(cfg)
-	pgPool, _ := postgres.NewPgPool()
+	client, err := mongodb.NewMongoClient(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	pgPool, err := postgres.NewPgPool()
+	if err != nil {
+		panic(err)
+	}
 
 	UserRepo := postgres.NewUserRepoPostgres(pgPool)
 	// UserRepo := ram.NewUserRepo()
@@ -86,17 +93,8 @@ func main() {
 		}
 
 		g.Use(customMiddleware.CustomAuth(&config, AuthImpl))
-		// в общем кажется, что надо откащываться от этой withConfig и писать свою мидлварь для авторизации где есть проверка на валидность токена в бд
-		// basicAuthMiddleware := echojwt.WithConfig(config)
-
-		// где-то тут, наверное, мне нужна мидллаварь, которая ходит в базу и проверяет валидность токена.
-		// но еще я делаб одинаковые операции с Claims. Вот их бы тоже унести куда-то.
-		// эти операции делать надо после проверки мидлвар.
-		// g.Use(basicAuthMiddleware)
 
 		g.POST("/posts", postHandler.PostPost)
-		// deletePost особенный - бросать нужно 401, когда пытаемся удалить не свой пост.
-		// при этом в идеале фронт даже показывать кнопку delete не должен
 		g.DELETE("/post/:id", postHandler.DeletePost)
 		g.POST("/post/:id", commentHandler.AddComment)
 		g.DELETE("/post/:id/:commentId", commentHandler.DeleteComment)

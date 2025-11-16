@@ -36,7 +36,6 @@ type UserImpl struct {
 }
 
 func NewUserImpl(repo user.UserRepository, AuthRepo auth.AuthRepository, JwtSecret string) *UserImpl {
-	// yakovlev: JWTSecret which?
 	return &UserImpl{ur: repo, ar: AuthRepo, JWTSecret: JwtSecret}
 }
 
@@ -45,8 +44,40 @@ func (ui *UserImpl) Register(ctx context.Context, Login, Password string) (strin
 
 	u := user.NewUser(Login)
 
-	if _, err := ui.ur.GetUser(ctx, u); !errors.Is(err, user.UserNotExistsError) {
-		return "", user.UserAlreadyExistsError
+	var errs []auth.ValidationError
+
+	// 1. Username: cannot be blank
+	if Login == "" {
+		errs = append(errs, auth.ValidationError{
+			Location: "body",
+			Param:    "username",
+			Value:    Login,
+			Msg:      "cannot be blank",
+		})
+	}
+
+	// 2. Password: must be at least 8 characters
+	if len(Password) < 8 {
+		errs = append(errs, auth.ValidationError{
+			Location: "body",
+			Param:    "password",
+			Value:    Password,
+			Msg:      "must be at least 8 characters long",
+		})
+	}
+
+	// 3. Password: must be at most 72 characters
+	if len(Password) > 72 {
+		errs = append(errs, auth.ValidationError{
+			Location: "body",
+			Param:    "password",
+			Value:    Password,
+			Msg:      "must be at most 72 characters long",
+		})
+	}
+
+	if len(errs) > 0 {
+		return "", auth.ValidationErrors{Errors: errs}
 	}
 
 	u, err := ui.ur.Create(ctx, u, Password)
