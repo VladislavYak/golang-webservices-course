@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-faster/errors"
 
@@ -38,8 +37,6 @@ func (r *UserRepoPostgres) GetUser(ctx context.Context, User *user.User) (*user.
 
 func (r *UserRepoPostgres) Create(ctx context.Context, User *user.User, Password string) (*user.User, error) {
 	const op = "Create"
-
-	fmt.Println("before insertion Create")
 
 	err := r.Pool.QueryRow(ctx,
 		"INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id",

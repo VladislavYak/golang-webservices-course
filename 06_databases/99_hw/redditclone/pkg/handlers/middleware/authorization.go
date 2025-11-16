@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
 	"github.com/VladislavYak/redditclone/pkg/domain/auth"
@@ -13,6 +12,7 @@ import (
 )
 
 // yakovlev: prettify it, it looks awful right now
+// lazy to prettify, it just works
 func CustomAuth(config *echojwt.Config, authService *application.AuthImpl) echo.MiddlewareFunc {
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -50,33 +50,21 @@ func CustomAuth(config *echojwt.Config, authService *application.AuthImpl) echo.
 			// 	extractors = append(config.TokenLookupFuncs, extractors...)
 			// }
 
-			fmt.Println("im inside custom auth")
-
-			fmt.Println("config.TokenLookup", config.TokenLookup)
-
 			extractors, ceErr := echojwt.CreateExtractors(config.TokenLookup)
 
-			fmt.Println("extracted extractor")
-
 			if ceErr != nil {
-				fmt.Println("ceErr CreateExtractors", ceErr)
 				return ceErr
 			}
 			// var lastExtractorErr error
 			// var lastTokenErr error
 
-			fmt.Println("len(extractors)", len(extractors))
-
 			for _, extractor := range extractors {
 				auths, extrErr := extractor(c)
-				fmt.Println("len(auths)", len(auths))
-				fmt.Println("extrErr", extrErr)
 				if extrErr != nil {
 					// lastExtractorErr = extrErr
 					continue
 				}
 				for _, tokenString := range auths {
-					fmt.Println("tokenString", tokenString)
 
 					hashSecretGetter := func(token *jwt.Token) (interface{}, error) {
 						// method, ok := token.Method.(*jwt.SigningMethodHMAC)
@@ -91,13 +79,10 @@ func CustomAuth(config *echojwt.Config, authService *application.AuthImpl) echo.
 					claims := auth.JwtCustomClaims{}
 					token, err := jwt.ParseWithClaims(tokenString, &claims, hashSecretGetter)
 
-					fmt.Println("token (after Parse)", token)
-					fmt.Println("err (after Parse)", err)
 					if err != nil || !token.Valid {
 						return err
 					}
 
-					fmt.Println("before running ValidateSession")
 					err = authService.ValidateSession(c.Request().Context(), token.Raw, claims.ExpiresAt.Time)
 					if err != nil {
 						// yakovlev: пока что хз как тут ошибки обарабывать, errors.Wrap или ХТТПШные?

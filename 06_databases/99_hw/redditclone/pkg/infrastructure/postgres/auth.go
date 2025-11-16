@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/VladislavYak/redditclone/pkg/domain/auth"
@@ -23,15 +22,11 @@ func NewAuthRepoPostgres(pool *pgxpool.Pool) *AuthRepoPostgres {
 
 func (a *AuthRepoPostgres) AddJWT(ctx context.Context, Token string, UserID string, IssuedAt time.Time, ExpiresAt time.Time) error {
 	const op = "AddJWT"
-	fmt.Println("before Add JWT")
 
-	fmt.Println("")
 	_, err := a.Pool.Exec(ctx,
 		"INSERT INTO sessions (user_id, token, issued_at, expires_at) VALUES ($1, $2, $3, $4)",
 		UserID, Token, IssuedAt, ExpiresAt,
 	)
-
-	fmt.Println("errrrrr", err)
 
 	if err != nil {
 		return errors.Wrap(err, op)
@@ -46,7 +41,7 @@ func (a *AuthRepoPostgres) AddJWT(ctx context.Context, Token string, UserID stri
 
 func (a *AuthRepoPostgres) ValidateJWT(ctx context.Context, Token string, ExpiresAt time.Time) error {
 	const op = "ValidateJWT"
-	fmt.Println("inside ValidateJWT")
+
 	var expiresAt time.Time
 	err := a.Pool.QueryRow(ctx, "select expires_at from sessions where token = $1", Token).Scan(&expiresAt)
 
@@ -57,8 +52,6 @@ func (a *AuthRepoPostgres) ValidateJWT(ctx context.Context, Token string, Expire
 	if err != nil {
 		return errors.Wrap(err, op)
 	}
-
-	fmt.Println("я тут")
 
 	if expiresAt.Before(time.Now()) {
 		return auth.ExpiredTokenError

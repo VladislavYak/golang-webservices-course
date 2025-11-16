@@ -28,7 +28,6 @@ func NewCommentRepoMongo(client *mongo.Client, dbName string, collectionName str
 
 func (cr *CommentRepoMongo) AddComment(ctx context.Context, Id string, Comment *comment.Comment) error {
 	const op = "Add Comment"
-	fmt.Println("inserteing comment")
 
 	Comment.WithId(bson.NewObjectID().Hex())
 

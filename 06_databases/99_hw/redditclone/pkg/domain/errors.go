@@ -3,6 +3,5 @@ package domain
 import "errors"
 
 var (
-	DifferentPostOwnerError = errors.New("cannot delete post: belongs to another user")
-	PostNotFoundError       = errors.New("post not found")
+	PostNotFoundError = errors.New("post not found")
 )

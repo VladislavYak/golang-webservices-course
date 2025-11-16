@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
@@ -23,14 +22,9 @@ func (ch *CommentHandler) AddComment(c echo.Context) error {
 
 	id := c.Param("id")
 
-	fmt.Println("im inside addComment handler")
-	fmt.Println("id", id)
-
 	var body struct {
 		Comment string `json:"comment"`
 	}
-
-	fmt.Println("body", body)
 
 	if err := c.Bind(&body); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())

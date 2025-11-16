@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/VladislavYak/redditclone/pkg/handlers"
 	// "github.com/VladislavYak/redditclone/pkg/post"
 	"github.com/VladislavYak/redditclone/pkg/application"
@@ -86,8 +84,6 @@ func main() {
 			},
 			SigningKey: []byte("secret"),
 		}
-
-		fmt.Println("config", config)
 
 		g.Use(customMiddleware.CustomAuth(&config, AuthImpl))
 		// в общем кажется, что надо откащываться от этой withConfig и писать свою мидлварь для авторизации где есть проверка на валидность токена в бд

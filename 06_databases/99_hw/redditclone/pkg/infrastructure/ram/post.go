@@ -3,7 +3,6 @@ package ram
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"sync"
 
@@ -76,7 +75,6 @@ func (pp *PostRepo) AddPost(ctx context.Context, Post *post.Post) (*post.Post, e
 
 	pp.Data = append(pp.Data, Post)
 
-	fmt.Println("my Posts", pp.Data)
 	return Post, nil
 }
 
