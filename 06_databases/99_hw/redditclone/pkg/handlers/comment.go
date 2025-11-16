@@ -36,7 +36,7 @@ func (ch *CommentHandler) AddComment(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	return echo.NewHTTPError(http.StatusCreated, returnedPost)
+	return c.JSON(http.StatusCreated, returnedPost)
 }
 
 func (ch *CommentHandler) DeleteComment(c echo.Context) error {
@@ -47,5 +47,5 @@ func (ch *CommentHandler) DeleteComment(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
-	return echo.NewHTTPError(http.StatusCreated, returnedPost)
+	return echo.NewHTTPError(http.StatusOK, returnedPost)
 }

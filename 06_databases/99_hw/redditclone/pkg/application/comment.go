@@ -40,6 +40,7 @@ func (ci *CommentImpl) AddComment(ctx context.Context, id string, Comment *comme
 	return returnedPost, nil
 }
 
+// сейчас любой чел может удалить любой коммент?
 func (ci *CommentImpl) DeleteComment(ctx context.Context, PostId string, CommentId string) (*postP.Post, error) {
 	const op = "DeleteComment"
 	err := ci.CommentRepo.DeleteComment(ctx, PostId, CommentId)
