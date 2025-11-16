@@ -43,7 +43,7 @@ func (cr *CommentRepoMongo) AddComment(ctx context.Context, Id string, Comment *
 	}
 
 	result, err := cr.Collection.UpdateOne(
-		context.TODO(),
+		ctx,
 		bson.M{"_id": objID},
 		update,
 	)
@@ -77,7 +77,7 @@ func (cr *CommentRepoMongo) DeleteComment(ctx context.Context, Id string, Commen
 
 	// Update the post in MongoDB
 	result, err := cr.Collection.UpdateOne(
-		context.TODO(),
+		ctx,
 		bson.M{"_id": objID},
 		update,
 	)

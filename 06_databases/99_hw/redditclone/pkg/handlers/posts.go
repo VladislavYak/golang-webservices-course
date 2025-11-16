@@ -26,7 +26,7 @@ type PostHandler struct {
 }
 
 func (ph *PostHandler) GetPosts(c echo.Context) error {
-	posts, err := ph.Implementation.GetAll(context.TODO())
+	posts, err := ph.Implementation.GetAll(c.Request().Context())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
@@ -38,7 +38,7 @@ func (ph *PostHandler) GetPostsByCategoryName(c echo.Context) error {
 
 	CategoryName := c.Param("CategoryName")
 
-	posts, err := ph.Implementation.GetPostsByCategoryName(context.TODO(), CategoryName)
+	posts, err := ph.Implementation.GetPostsByCategoryName(c.Request().Context(), CategoryName)
 
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -50,7 +50,7 @@ func (ph *PostHandler) GetPostsByCategoryName(c echo.Context) error {
 func (ph *PostHandler) GetPostByID(c echo.Context) error {
 	id := c.Param("id")
 
-	post, err := ph.Implementation.GetByID(context.TODO(), id)
+	post, err := ph.Implementation.GetByID(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
@@ -62,7 +62,7 @@ func (ph *PostHandler) GetPostByID(c echo.Context) error {
 func (ph *PostHandler) GetPostByUsername(c echo.Context) error {
 	username := c.Param("username")
 
-	post, err := ph.Implementation.GetPostsByUsername(context.TODO(), username)
+	post, err := ph.Implementation.GetPostsByUsername(c.Request().Context(), username)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}

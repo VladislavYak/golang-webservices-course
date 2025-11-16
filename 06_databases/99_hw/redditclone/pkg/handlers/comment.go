@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
@@ -32,7 +31,7 @@ func (ch *CommentHandler) AddComment(c echo.Context) error {
 
 	Comment := comment.NewComment(*user.NewUser(claims.Login).WithID(claims.UserID), body.Comment)
 
-	returnedPost, err := ch.Implementation.AddComment(context.TODO(), id, Comment)
+	returnedPost, err := ch.Implementation.AddComment(c.Request().Context(), id, Comment)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
@@ -44,7 +43,7 @@ func (ch *CommentHandler) DeleteComment(c echo.Context) error {
 	id := c.Param("id")
 	CommentId := c.Param("commentId")
 
-	returnedPost, err := ch.Implementation.DeleteComment(context.TODO(), id, CommentId)
+	returnedPost, err := ch.Implementation.DeleteComment(c.Request().Context(), id, CommentId)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}

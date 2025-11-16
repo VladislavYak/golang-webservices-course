@@ -67,7 +67,7 @@ func (pt *postTmp) ToPost() *post.Post {
 
 func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) {
 	const op = "GetAllPosts"
-	cursor, err := pp.Collection.Find(context.TODO(), bson.D{})
+	cursor, err := pp.Collection.Find(ctx, bson.D{})
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
@@ -75,7 +75,7 @@ func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) 
 
 	var postsTmp []*postTmp
 
-	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
+	if err = cursor.All(ctx, &postsTmp); err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
@@ -91,14 +91,14 @@ func (pp *PostRepoMongo) GetAllPosts(ctx context.Context) ([]*post.Post, error) 
 
 func (pp *PostRepoMongo) GetPostsByCategoryName(ctx context.Context, CategoryName string) ([]*post.Post, error) {
 	const op = "GetPostsByCategoryName"
-	cursor, err := pp.Collection.Find(context.TODO(), bson.D{{Key: "category", Value: CategoryName}})
+	cursor, err := pp.Collection.Find(ctx, bson.D{{Key: "category", Value: CategoryName}})
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
 	var postsTmp []*postTmp
-	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
+	if err = cursor.All(ctx, &postsTmp); err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
@@ -118,7 +118,7 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 	filter := bson.M{"_id": value}
 
 	var postTmp *postTmp
-	err := pp.Collection.FindOne(context.TODO(), filter).Decode(&postTmp)
+	err := pp.Collection.FindOne(ctx, filter).Decode(&postTmp)
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
@@ -129,14 +129,14 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 }
 
 func (pp *PostRepoMongo) GetPostsByUsername(ctx context.Context, Username string) ([]*post.Post, error) {
-	cursor, err := pp.Collection.Find(context.TODO(), bson.M{"author.username": Username})
+	cursor, err := pp.Collection.Find(ctx, bson.M{"author.username": Username})
 
 	if err != nil {
 		panic(err)
 	}
 
 	var postsTmp []*postTmp
-	if err = cursor.All(context.TODO(), &postsTmp); err != nil {
+	if err = cursor.All(ctx, &postsTmp); err != nil {
 		panic(err)
 	}
 
@@ -170,7 +170,7 @@ func (pp *PostRepoMongo) AddPost(ctx context.Context, Post *post.Post) (*post.Po
 		Author:           Post.Author,
 	}
 
-	result, err := pp.Collection.InsertOne(context.TODO(), p)
+	result, err := pp.Collection.InsertOne(ctx, p)
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
@@ -196,7 +196,7 @@ func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post,
 		return nil, errors.Wrap(err, op)
 	}
 
-	_, err = pp.Collection.DeleteOne(context.TODO(), bson.D{{"_id", value}})
+	_, err = pp.Collection.DeleteOne(ctx, bson.D{{"_id", value}})
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
