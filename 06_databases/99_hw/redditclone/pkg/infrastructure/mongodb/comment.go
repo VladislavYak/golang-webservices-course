@@ -26,7 +26,7 @@ func NewCommentRepoMongo(client *mongo.Client, dbName string, collectionName str
 	}
 }
 
-func (cr *CommentRepoMongo) AddComment(Id string, Comment *comment.Comment) error {
+func (cr *CommentRepoMongo) AddComment(ctx context.Context, Id string, Comment *comment.Comment) error {
 	const op = "Add Comment"
 	fmt.Println("inserteing comment")
 
@@ -60,7 +60,7 @@ func (cr *CommentRepoMongo) AddComment(Id string, Comment *comment.Comment) erro
 
 }
 
-func (cr *CommentRepoMongo) DeleteComment(Id string, CommentId string) error {
+func (cr *CommentRepoMongo) DeleteComment(ctx context.Context, Id string, CommentId string) error {
 
 	objID, err := bson.ObjectIDFromHex(Id)
 	if err != nil {
@@ -89,7 +89,7 @@ func (cr *CommentRepoMongo) DeleteComment(Id string, CommentId string) error {
 		return domain.PostNotFoundError
 	}
 	if result.ModifiedCount == 0 {
-		return fmt.Errorf("no comment found with ID %s in post %s", CommentId, Id)
+		return comment.CommentNotFoundError
 	}
 
 	return nil

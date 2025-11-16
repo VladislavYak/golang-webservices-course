@@ -1,6 +1,8 @@
 package comment
 
+import "context"
+
 type CommentRepository interface {
-	AddComment(string, *Comment) error
-	DeleteComment(string, string) error
+	AddComment(context.Context, string, *Comment) error
+	DeleteComment(context.Context, string, string) error
 }

@@ -1,6 +1,7 @@
 package ram
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"sync"
@@ -22,7 +23,7 @@ func NewCommentRepo() *CommentRepo {
 	return &CommentRepo{}
 }
 
-func (pp *CommentRepo) AddComment(Id string, comment *comment.Comment) error {
+func (pp *CommentRepo) AddComment(ctx context.Context, Id string, comment *comment.Comment) error {
 	// add more mutexes handling
 	pp.Mutex.Lock()
 	defer pp.Mutex.Unlock()
@@ -39,7 +40,7 @@ func (pp *CommentRepo) AddComment(Id string, comment *comment.Comment) error {
 	return errors.New("post not found")
 }
 
-func (pp *CommentRepo) DeleteComment(id string, commentId string) error {
+func (pp *CommentRepo) DeleteComment(ctx context.Context, id string, commentId string) error {
 
 	pp.Mutex.Lock()
 	defer pp.Mutex.Unlock()

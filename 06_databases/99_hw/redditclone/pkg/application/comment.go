@@ -25,14 +25,14 @@ func NewCommentImpl(repoP postP.PostRepository, repoC commentC.CommentRepository
 	return &CommentImpl{PostRepo: repoP, CommentRepo: repoC}
 }
 
-func (ci *CommentImpl) AddComment(c context.Context, id string, Comment *comment.Comment) (*postP.Post, error) {
+func (ci *CommentImpl) AddComment(ctx context.Context, id string, Comment *comment.Comment) (*postP.Post, error) {
 	const op = "AddComment"
-	err := ci.CommentRepo.AddComment(id, Comment)
+	err := ci.CommentRepo.AddComment(ctx, id, Comment)
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
-	returnedPost, err := ci.PostRepo.GetPostByID(context.TODO(), id)
+	returnedPost, err := ci.PostRepo.GetPostByID(ctx, id)
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
@@ -40,15 +40,15 @@ func (ci *CommentImpl) AddComment(c context.Context, id string, Comment *comment
 	return returnedPost, nil
 }
 
-func (ci *CommentImpl) DeleteComment(c context.Context, PostId string, CommentId string) (*postP.Post, error) {
+func (ci *CommentImpl) DeleteComment(ctx context.Context, PostId string, CommentId string) (*postP.Post, error) {
 	const op = "DeleteComment"
-	err := ci.CommentRepo.DeleteComment(PostId, CommentId)
+	err := ci.CommentRepo.DeleteComment(ctx, PostId, CommentId)
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
-	returnedPost, err := ci.PostRepo.GetPostByID(context.TODO(), PostId)
+	returnedPost, err := ci.PostRepo.GetPostByID(ctx, PostId)
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
