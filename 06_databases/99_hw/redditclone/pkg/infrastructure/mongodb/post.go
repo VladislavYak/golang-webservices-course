@@ -119,6 +119,11 @@ func (pp *PostRepoMongo) GetPostByID(ctx context.Context, ID string) (*post.Post
 
 	var postTmp *postTmp
 	err := pp.Collection.FindOne(ctx, filter).Decode(&postTmp)
+
+	if err == mongo.ErrNoDocuments {
+		return nil, errors.Wrap(post.PostNotFoundError, op)
+	}
+
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
@@ -197,16 +202,18 @@ func (pp *PostRepoMongo) DeletePost(ctx context.Context, Id string) (*post.Post,
 		return nil, errors.Wrap(err, op)
 	}
 
-	_, err = pp.Collection.DeleteOne(ctx, bson.D{{"_id", value}})
+	var deletedPost post.Post
+	err = pp.Collection.FindOneAndDelete(ctx, bson.M{"_id": value}).
+		Decode(&deletedPost)
+
+	if err == mongo.ErrNoDocuments {
+		return nil, post.PostNotFoundError
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
 
-	// yakovlev: check this out
-	return nil, nil
-
-	// return nil, errors.New("this id doesnot exist")
-
+	return &deletedPost, nil
 }
 
 func (pp *PostRepoMongo) Vote(ctx context.Context, PostID string, vote int) (*post.Post, error) {
