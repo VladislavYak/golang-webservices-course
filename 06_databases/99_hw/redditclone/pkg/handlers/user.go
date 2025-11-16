@@ -8,24 +8,18 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type LoginForm struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type RegisterForm struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
 type UserHandler struct {
 	Impl application.UserInterface
 }
 
 func (uh *UserHandler) Login(c echo.Context) error {
-	form := &LoginForm{}
 
-	if err := c.Bind(form); err != nil {
+	var form struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	if err := c.Bind(&form); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 	token, err := uh.Impl.Login(c.Request().Context(), form.Username, form.Password)
@@ -40,9 +34,12 @@ func (uh *UserHandler) Login(c echo.Context) error {
 
 func (uh *UserHandler) Register(c echo.Context) error {
 
-	form := &RegisterForm{}
+	var form struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
 
-	if err := c.Bind(form); err != nil {
+	if err := c.Bind(&form); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

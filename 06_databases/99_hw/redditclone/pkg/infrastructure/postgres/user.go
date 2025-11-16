@@ -24,7 +24,7 @@ func (r *UserRepoPostgres) GetUser(ctx context.Context, User *user.User) (*user.
 	const op = "GetUser"
 
 	var u user.User
-	err := r.Pool.QueryRow(ctx, "SELECT id, login, password FROM users WHERE login = $1", User.Username).
+	err := r.Pool.QueryRow(ctx, "SELECT id, login FROM users WHERE login = $1", User.Username).
 		Scan(&u.UserID, &u.Username)
 	if err == pgx.ErrNoRows {
 		return nil, user.UserNotExistsError
@@ -53,7 +53,7 @@ func (r *UserRepoPostgres) GetUserPassword(ctx context.Context, user *user.User)
 	const op = "GetUserPassword"
 
 	var Password string
-	err := r.Pool.QueryRow(ctx, "select password from users where username = $1", user.Username).Scan(Password)
+	err := r.Pool.QueryRow(ctx, "select password from users where login = $1", user.Username).Scan(&Password)
 	if err == pgx.ErrNoRows {
 		return "", errors.New("user not found")
 	}

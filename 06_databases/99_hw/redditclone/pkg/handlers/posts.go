@@ -1,15 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
-	"github.com/VladislavYak/redditclone/pkg/domain/auth"
 	"github.com/VladislavYak/redditclone/pkg/domain/post"
 	"github.com/VladislavYak/redditclone/pkg/domain/user"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -73,20 +70,24 @@ func (ph *PostHandler) GetPostByUsername(c echo.Context) error {
 
 func (ph *PostHandler) PostPost(c echo.Context) error {
 
-	us := c.Get("user").(*jwt.Token)
+	ctx := getUserCtx(c)
 
-	claims := us.Claims.(*auth.JwtCustomClaims)
+	userID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return errors.New("cannot cast userID to string")
+	}
 
-	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "Username", claims.Login)
-	ctx = context.WithValue(ctx, "UserID", claims.UserID)
+	username, ok := ctx.Value("Username").(string)
+	if !ok {
+		return errors.New("cannot cast userID to string")
+	}
 
 	pp := &PostParams{}
 	if err := c.Bind(pp); err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 	}
 
-	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, *user.NewUser(claims.Login).WithID(claims.UserID))
+	Post := post.NewPost(pp.Category, pp.Type, pp.Url, pp.Text, pp.Title, *user.NewUser(username).WithID(userID))
 
 	postReturned, err := ph.Implementation.Create(ctx, Post)
 	if err != nil {
@@ -100,15 +101,14 @@ func (ph *PostHandler) DeletePost(c echo.Context) error {
 
 	id := c.Param("id")
 
-	us := c.Get("user").(*jwt.Token)
+	ctx := getUserCtx(c)
 
-	claims := us.Claims.(*auth.JwtCustomClaims)
+	userID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return errors.New("cannot cast userID to string")
+	}
 
-	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "Username", claims.Login)
-	ctx = context.WithValue(ctx, "UserID", claims.UserID)
-
-	deletedPost, err := ph.Implementation.Delete(ctx, id, claims.UserID)
+	deletedPost, err := ph.Implementation.Delete(ctx, id, userID)
 
 	if errors.Is(err, post.DifferentPostOwnerError) {
 		return echo.NewHTTPError(http.StatusForbidden, err)
@@ -123,12 +123,7 @@ func (ph *PostHandler) DeletePost(c echo.Context) error {
 func (ph *PostHandler) Upvote(c echo.Context) error {
 	PostId := c.Param("id")
 
-	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*auth.JwtCustomClaims)
-
-	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "Username", claims.Login)
-	ctx = context.WithValue(ctx, "UserID", claims.UserID)
+	ctx := getUserCtx(c)
 
 	returnedPost, err := ph.Implementation.Upvote(ctx, PostId)
 
@@ -136,19 +131,14 @@ func (ph *PostHandler) Upvote(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	return echo.NewHTTPError(http.StatusOK, returnedPost)
+	return c.JSON(http.StatusOK, returnedPost)
 
 }
 
 func (ph *PostHandler) Downvote(c echo.Context) error {
 	PostId := c.Param("id")
 
-	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*auth.JwtCustomClaims)
-
-	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "Username", claims.Login)
-	ctx = context.WithValue(ctx, "UserID", claims.UserID)
+	ctx := getUserCtx(c)
 
 	returnedPost, err := ph.Implementation.Downvote(ctx, PostId)
 
@@ -156,18 +146,13 @@ func (ph *PostHandler) Downvote(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	return echo.NewHTTPError(http.StatusOK, returnedPost)
+	return c.JSON(http.StatusOK, returnedPost)
 }
 
 func (ph *PostHandler) Unvote(c echo.Context) error {
 	PostId := c.Param("id")
 
-	us := c.Get("user").(*jwt.Token)
-	claims := us.Claims.(*auth.JwtCustomClaims)
-
-	ctx := c.Request().Context()
-	ctx = context.WithValue(ctx, "Username", claims.Login)
-	ctx = context.WithValue(ctx, "UserID", claims.UserID)
+	ctx := getUserCtx(c)
 
 	returnedPost, err := ph.Implementation.Unvote(ctx, PostId)
 
@@ -175,6 +160,6 @@ func (ph *PostHandler) Unvote(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	return echo.NewHTTPError(http.StatusOK, returnedPost)
+	return c.JSON(http.StatusOK, returnedPost)
 
 }
