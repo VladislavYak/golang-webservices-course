@@ -28,7 +28,13 @@ func NewCommentImpl(repoP postP.PostRepository, repoC commentC.CommentRepository
 // yakovlev: сейчас можно пустой коммент оставить - а это плохо)
 func (ci *CommentImpl) AddComment(ctx context.Context, id string, Comment *comment.Comment) (*postP.Post, error) {
 	const op = "AddComment"
+
+	if len(Comment.Body) == 0 {
+		return nil, errors.Wrap(comment.BlandCommentError, op)
+	}
+
 	err := ci.CommentRepo.AddComment(ctx, id, Comment)
+
 	if err != nil {
 		return nil, errors.Wrap(err, op)
 	}
