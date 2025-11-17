@@ -89,7 +89,6 @@ func (p *PostImpl) GetAll(ctx context.Context) ([]*postP.Post, error) {
 	}
 
 	return returnedPost, err
-
 }
 
 func (p *PostImpl) GetByID(ctx context.Context, s string) (*postP.Post, error) {
@@ -101,7 +100,6 @@ func (p *PostImpl) GetByID(ctx context.Context, s string) (*postP.Post, error) {
 	}
 
 	return returnedPost, err
-
 }
 
 func (p *PostImpl) GetPostsByCategoryName(ctx context.Context, s string) ([]*postP.Post, error) {
@@ -113,7 +111,6 @@ func (p *PostImpl) GetPostsByCategoryName(ctx context.Context, s string) ([]*pos
 	}
 
 	return returnedPost, err
-
 }
 
 func (p *PostImpl) GetPostsByUsername(ctx context.Context, s string) ([]*postP.Post, error) {
