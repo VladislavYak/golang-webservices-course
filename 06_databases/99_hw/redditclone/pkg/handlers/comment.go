@@ -40,10 +40,12 @@ func (ch *CommentHandler) AddComment(c echo.Context) error {
 }
 
 func (ch *CommentHandler) DeleteComment(c echo.Context) error {
+	ctx := getUserCtx(c)
+
 	id := c.Param("id")
 	CommentId := c.Param("commentId")
 
-	returnedPost, err := ch.Implementation.DeleteComment(c.Request().Context(), id, CommentId)
+	returnedPost, err := ch.Implementation.DeleteComment(ctx, id, CommentId)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}

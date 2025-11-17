@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"fmt"
+	"net/http"
 
 	"github.com/VladislavYak/redditclone/pkg/application"
 	"github.com/VladislavYak/redditclone/pkg/domain/auth"
@@ -71,17 +71,13 @@ func CustomAuth(config *echojwt.Config, authService *application.AuthImpl) echo.
 					token, err := jwt.ParseWithClaims(tokenString, &claims, hashSecretGetter)
 
 					if err != nil || !token.Valid {
-						return err
+						return echo.NewHTTPError(http.StatusInternalServerError, auth.InvalidTokenError)
 					}
 
-					fmt.Println("token", token)
 					err = authService.ValidateSession(c.Request().Context(), token.Raw, claims.ExpiresAt.Time)
-					fmt.Println("i was here")
 					if err != nil {
-						fmt.Println("i was here 2")
-						fmt.Println("err", err)
-						// yakovlev: пока что хз как тут ошибки обарабывать, errors.Wrap или ХТТПШные?
-						return echo.NewHTTPError(500, err)
+
+						return echo.NewHTTPError(http.StatusInternalServerError, err)
 					}
 
 					// Store user information from token into context.

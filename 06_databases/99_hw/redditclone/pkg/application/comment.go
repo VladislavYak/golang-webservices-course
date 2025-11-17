@@ -41,12 +41,23 @@ func (ci *CommentImpl) AddComment(ctx context.Context, id string, Comment *comme
 	return returnedPost, nil
 }
 
-// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpbiI6InRlc3R0ZXN0MiIsInVzZXJfaWQiOiI0IiwiZXhwIjoxNzYzMzkwODI1LCJpYXQiOjE3NjMzODk5MjV9.K0nH0a_ZiRNqtZM2Al_TVc_dn5OmrKPYN_z47lbp8FI
-
-// сейчас любой чел может удалить любой коммент? - da
 func (ci *CommentImpl) DeleteComment(ctx context.Context, PostId string, CommentId string) (*postP.Post, error) {
 	const op = "DeleteComment"
 	err := ci.CommentRepo.DeleteComment(ctx, PostId, CommentId)
+
+	userID, ok := ctx.Value("UserID").(string)
+	if !ok {
+		return nil, errors.New("cannot cast userID to string")
+	}
+
+	p, err := ci.PostRepo.GetPostByID(ctx, PostId)
+	if err != nil {
+		return nil, errors.Wrap(err, op)
+	}
+
+	if p.Author.UserID != userID {
+		return nil, comment.DifferentCommentWriterError
+	}
 
 	if err != nil {
 		return nil, errors.Wrap(err, op)
