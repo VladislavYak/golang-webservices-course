@@ -127,17 +127,25 @@ func (ui *UserImpl) Login(ctx context.Context, Login, Password string) (string, 
 		return "", auth.InvalidPasswordError
 	}
 
+	issuedAt := time.Now()
+	expiresAt := issuedAt.Add(15 * time.Minute) // Shortened lifetime for security
+
 	claims := &auth.JwtCustomClaims{
 		Login:  Login,
 		UserID: User.UserID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
+			IssuedAt:  jwt.NewNumericDate(issuedAt),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
 		},
 	}
 
 	token, err := auth.GenerateJWTToken(claims, ui.JWTSecret)
 
 	if err != nil {
+		return "", errors.Wrap(err, op)
+	}
+
+	if err = ui.ar.AddJWT(ctx, token, claims.UserID, claims.IssuedAt.Time, claims.ExpiresAt.Time); err != nil {
 		return "", errors.Wrap(err, op)
 	}
 
