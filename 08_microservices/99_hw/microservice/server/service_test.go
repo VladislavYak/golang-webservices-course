@@ -1,9 +1,11 @@
-//nolint:typecheck
+// //nolint:typecheck
 package main
 
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"reflect"
 	"runtime"
 	"strings"
@@ -13,10 +15,8 @@ import (
 
 	"gitlab.com/vk-golang/lectures/08_microservices/99_hw/microservice/service"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -59,7 +59,7 @@ func getConsumerCtx(consumerName string) context.Context {
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
-// старт-стоп сервера
+// // старт-стоп сервера
 func TestServerStartStop(t *testing.T) {
 	ctx, finish := context.WithCancel(context.Background())
 	err := StartMyMicroservice(ctx, listenAddr, ACLData)
@@ -106,73 +106,73 @@ func TestServerLeak(t *testing.T) {
 }
 
 // // ACL (права на методы доступа) парсится корректно
-func TestACLParseError(t *testing.T) {
-	// finish'а тут нет потому что стартовать у вас ничего не должно если не получилось распаковать ACL
-	err := StartMyMicroservice(context.Background(), listenAddr, "{.;")
-	if err == nil {
-		t.Fatalf("expacted error on bad acl json, have nil")
-	}
-}
+// func TestACLParseError(t *testing.T) {
+// 	// finish'а тут нет потому что стартовать у вас ничего не должно если не получилось распаковать ACL
+// 	err := StartMyMicroservice(context.Background(), listenAddr, "{.;")
+// 	if err == nil {
+// 		t.Fatalf("expacted error on bad acl json, have nil")
+// 	}
+// }
 
-// // ACL (права на методы доступа) работает корректно
-func TestACL(t *testing.T) {
-	wait(1)
-	ctx, finish := context.WithCancel(context.Background())
-	err := StartMyMicroservice(ctx, listenAddr, ACLData)
-	if err != nil {
-		t.Fatalf("cant start server initial: %v", err)
-	}
-	wait(1)
-	defer func() {
-		finish()
-		wait(1)
-	}()
+// ACL (права на методы доступа) работает корректно
+// func TestACL(t *testing.T) {
+// 	wait(1)
+// 	ctx, finish := context.WithCancel(context.Background())
+// 	err := StartMyMicroservice(ctx, listenAddr, ACLData)
+// 	if err != nil {
+// 		t.Fatalf("cant start server initial: %v", err)
+// 	}
+// 	wait(1)
+// 	defer func() {
+// 		finish()
+// 		wait(1)
+// 	}()
 
-	conn := getGrpcConn(t)
-	defer conn.Close()
+// 	conn := getGrpcConn(t)
+// 	defer conn.Close()
 
-	biz := service.NewBizClient(conn)
-	adm := service.NewAdminClient(conn)
+// 	biz := service.NewBizClient(conn)
+// 	adm := service.NewAdminClient(conn)
 
-	for idx, ctx := range []context.Context{
-		context.Background(),       // нет поля для ACL
-		getConsumerCtx("unknown"),  // поле есть, неизвестный консюмер
-		getConsumerCtx("biz_user"), // поле есть, нет доступа
-	} {
-		_, err = biz.Test(ctx, &service.Nothing{})
-		if err == nil {
-			t.Fatalf("[%d] ACL fail: expected err on disallowed method", idx)
-		} else if code := status.Code(err); code != codes.Unauthenticated {
-			t.Fatalf("[%d] ACL fail: expected Unauthenticated code, got %v", idx, code)
-		}
-	}
+// 	for idx, ctx := range []context.Context{
+// 		context.Background(),       // нет поля для ACL
+// 		getConsumerCtx("unknown"),  // поле есть, неизвестный консюмер
+// 		getConsumerCtx("biz_user"), // поле есть, нет доступа
+// 	} {
+// 		_, err = biz.Test(ctx, &service.Nothing{})
+// 		if err == nil {
+// 			t.Fatalf("[%d] ACL fail: expected err on disallowed method", idx)
+// 		} else if code := status.Code(err); code != codes.Unauthenticated {
+// 			t.Fatalf("[%d] ACL fail: expected Unauthenticated code, got %v", idx, code)
+// 		}
+// 	}
 
-	// есть доступ
-	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
-	if err != nil {
-		t.Fatalf("ACL fail: unexpected error: %v", err)
-	}
-	_, err = biz.Check(getConsumerCtx("biz_admin"), &service.Nothing{})
-	if err != nil {
-		t.Fatalf("ACL fail: unexpected error: %v", err)
-	}
-	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
-	if err != nil {
-		t.Fatalf("ACL fail: unexpected error: %v", err)
-	}
+// 	// есть доступ
+// 	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatalf("ACL fail: unexpected error: %v", err)
+// 	}
+// 	_, err = biz.Check(getConsumerCtx("biz_admin"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatalf("ACL fail: unexpected error: %v", err)
+// 	}
+// 	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatalf("ACL fail: unexpected error: %v", err)
+// 	}
 
-	// ACL на методах, которые возвращают поток данных
-	logger, err := adm.Logging(getConsumerCtx("unknown"), &service.Nothing{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = logger.Recv()
-	if err == nil {
-		t.Fatalf("ACL fail: expected err on disallowed method")
-	} else if code := status.Code(err); code != codes.Unauthenticated {
-		t.Fatalf("ACL fail: expected Unauthenticated code, got %v", code)
-	}
-}
+// 	// ACL на методах, которые возвращают поток данных
+// 	logger, err := adm.Logging(getConsumerCtx("unknown"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	_, err = logger.Recv()
+// 	if err == nil {
+// 		t.Fatalf("ACL fail: expected err on disallowed method")
+// 	} else if code := status.Code(err); code != codes.Unauthenticated {
+// 		t.Fatalf("ACL fail: expected Unauthenticated code, got %v", code)
+// 	}
+// }
 
 func TestLogging(t *testing.T) {
 	ctx, finish := context.WithCancel(context.Background())
@@ -224,7 +224,7 @@ func TestLogging(t *testing.T) {
 		defer wg.Done()
 		for i := 0; i < 4; i++ {
 			evt, errTmp := logStream1.Recv()
-			// log.Println("logger 1", evt, errTmp)
+			log.Println("logger 1", evt, errTmp)
 			if errTmp != nil {
 				t.Errorf("unexpected error: %v, awaiting event", errTmp)
 				return
@@ -243,7 +243,7 @@ func TestLogging(t *testing.T) {
 		defer wg.Done()
 		for i := 0; i < 3; i++ {
 			evt, errTmp := logStream2.Recv()
-			// log.Println("logger 2", evt, errTmp)
+			log.Println("logger 2", evt, errTmp)
 			if errTmp != nil {
 				t.Errorf("unexpected error: %v, awaiting event", errTmp)
 				return
@@ -277,7 +277,9 @@ func TestLogging(t *testing.T) {
 	}
 	time.Sleep(2 * time.Millisecond)
 
+	fmt.Println("before wg wait")
 	wg.Wait()
+	fmt.Println("AFTER wg wait")
 
 	expectedLogData1 := []*service.Event{
 		{Consumer: "logger", Method: "/main.Admin/Logging"},
@@ -291,6 +293,26 @@ func TestLogging(t *testing.T) {
 		{Consumer: "biz_admin", Method: "/main.Biz/Test"},
 	}
 
+	fmt.Println("-----")
+	fmt.Println("logData1", logData1)
+	fmt.Println("logData2", logData2)
+	fmt.Println("-----")
+
+	fmt.Println("logData1[0]", logData1[0])
+	fmt.Println("logData2[0]", logData1[0])
+
+	fmt.Println("logData1[0], expectedLogData1[0]", logData1[0], expectedLogData1[0])
+	fmt.Println("logData1[1], expectedLogData1[1]", logData1[1], expectedLogData1[1])
+	fmt.Println("logData1[2], expectedLogData1[2]", logData1[2], expectedLogData1[2])
+	fmt.Println("logData1[3], expectedLogData1[3]", logData1[3], expectedLogData1[3])
+
+	fmt.Println("0", reflect.DeepEqual(logData1[0], expectedLogData1[0]))
+	fmt.Println("1", reflect.DeepEqual(logData1[1], expectedLogData1[1]))
+	fmt.Println("2", reflect.DeepEqual(logData1[2], expectedLogData1[2]))
+	fmt.Println("3", reflect.DeepEqual(logData1[3], expectedLogData1[3]))
+
+	fmt.Println("reflect.DeepEqual(logData1, expectedLogData1)", reflect.DeepEqual(logData1, expectedLogData1))
+
 	if !reflect.DeepEqual(logData1, expectedLogData1) {
 		t.Fatalf("logs1 dont match\nhave %+v\nwant %+v", logData1, expectedLogData1)
 	}
@@ -299,157 +321,157 @@ func TestLogging(t *testing.T) {
 	}
 }
 
-// func TestStat(t *testing.T) {
-// 	ctx, finish := context.WithCancel(context.Background())
-// 	err := StartMyMicroservice(ctx, listenAddr, ACLData)
-// 	if err != nil {
-// 		t.Fatalf("cant start server initial: %v", err)
-// 	}
-// 	wait(1)
-// 	defer func() {
-// 		finish()
-// 		wait(2)
-// 	}()
+func TestStat(t *testing.T) {
+	ctx, finish := context.WithCancel(context.Background())
+	err := StartMyMicroservice(ctx, listenAddr, ACLData)
+	if err != nil {
+		t.Fatalf("cant start server initial: %v", err)
+	}
+	wait(1)
+	defer func() {
+		finish()
+		wait(2)
+	}()
 
-// 	conn := getGrpcConn(t)
-// 	defer conn.Close()
+	conn := getGrpcConn(t)
+	defer conn.Close()
 
-// 	biz := service.NewBizClient(conn)
-// 	adm := service.NewAdminClient(conn)
+	biz := service.NewBizClient(conn)
+	adm := service.NewAdminClient(conn)
 
-// 	statStream1, err := adm.Statistics(getConsumerCtx("stat"), &service.StatInterval{IntervalSeconds: 2})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	wait(1)
-// 	statStream2, err := adm.Statistics(getConsumerCtx("stat"), &service.StatInterval{IntervalSeconds: 3})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	statStream1, err := adm.Statistics(getConsumerCtx("stat"), &service.StatInterval{IntervalSeconds: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wait(1)
+	statStream2, err := adm.Statistics(getConsumerCtx("stat"), &service.StatInterval{IntervalSeconds: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	mu := &sync.Mutex{}
-// 	stat1 := &service.Stat{}
-// 	stat2 := &service.Stat{}
+	mu := &sync.Mutex{}
+	stat1 := &service.Stat{}
+	stat2 := &service.Stat{}
 
-// 	wg := &sync.WaitGroup{}
-// 	wg.Add(2)
-// 	go func() {
-// 		for {
-// 			stat, errTmp := statStream1.Recv()
-// 			if errTmp != nil && errTmp != io.EOF {
-// 				// fmt.Printf("unexpected error %v\n", errTmp)
-// 				return
-// 			} else if errTmp == io.EOF {
-// 				break
-// 			}
-// 			// log.Println("stat1", stat, errTmp)
-// 			mu.Lock()
-// 			// это грязный хак
-// 			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
-// 			// поэтому берем не оригинал сообщения, а только нужные значения
-// 			stat1 = &service.Stat{
-// 				ByMethod:   stat.ByMethod,
-// 				ByConsumer: stat.ByConsumer,
-// 			}
-// 			mu.Unlock()
-// 		}
-// 	}()
-// 	go func() {
-// 		for {
-// 			stat, errTmp := statStream2.Recv()
-// 			if errTmp != nil && errTmp != io.EOF {
-// 				// fmt.Printf("unexpected error %v\n", errTmp)
-// 				return
-// 			} else if errTmp == io.EOF {
-// 				break
-// 			}
-// 			// log.Println("stat2", stat, errTmp)
-// 			mu.Lock()
-// 			// это грязный хак
-// 			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
-// 			// поэтому берем не оригинал сообщения, а только нужные значения
-// 			stat2 = &service.Stat{
-// 				ByMethod:   stat.ByMethod,
-// 				ByConsumer: stat.ByConsumer,
-// 			}
-// 			mu.Unlock()
-// 		}
-// 	}()
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		for {
+			stat, errTmp := statStream1.Recv()
+			if errTmp != nil && errTmp != io.EOF {
+				// fmt.Printf("unexpected error %v\n", errTmp)
+				return
+			} else if errTmp == io.EOF {
+				break
+			}
+			// log.Println("stat1", stat, errTmp)
+			mu.Lock()
+			// это грязный хак
+			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
+			// поэтому берем не оригинал сообщения, а только нужные значения
+			stat1 = &service.Stat{
+				ByMethod:   stat.ByMethod,
+				ByConsumer: stat.ByConsumer,
+			}
+			mu.Unlock()
+		}
+	}()
+	go func() {
+		for {
+			stat, errTmp := statStream2.Recv()
+			if errTmp != nil && errTmp != io.EOF {
+				// fmt.Printf("unexpected error %v\n", errTmp)
+				return
+			} else if errTmp == io.EOF {
+				break
+			}
+			// log.Println("stat2", stat, errTmp)
+			mu.Lock()
+			// это грязный хак
+			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
+			// поэтому берем не оригинал сообщения, а только нужные значения
+			stat2 = &service.Stat{
+				ByMethod:   stat.ByMethod,
+				ByConsumer: stat.ByConsumer,
+			}
+			mu.Unlock()
+		}
+	}()
 
-// 	wait(1)
+	wait(1)
 
-// 	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	_, err = biz.Add(getConsumerCtx("biz_user"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = biz.Add(getConsumerCtx("biz_user"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	wait(200) // 2 sec
+	wait(200) // 2 sec
 
-// 	expectedStat1 := &service.Stat{
-// 		ByMethod: map[string]uint64{
-// 			"/main.Biz/Check":        1,
-// 			"/main.Biz/Add":          1,
-// 			"/main.Biz/Test":         1,
-// 			"/main.Admin/Statistics": 1,
-// 		},
-// 		ByConsumer: map[string]uint64{
-// 			"biz_user":  2,
-// 			"biz_admin": 1,
-// 			"stat":      1,
-// 		},
-// 	}
+	expectedStat1 := &service.Stat{
+		ByMethod: map[string]uint64{
+			"/main.Biz/Check":        1,
+			"/main.Biz/Add":          1,
+			"/main.Biz/Test":         1,
+			"/main.Admin/Statistics": 1,
+		},
+		ByConsumer: map[string]uint64{
+			"biz_user":  2,
+			"biz_admin": 1,
+			"stat":      1,
+		},
+	}
 
-// 	mu.Lock()
-// 	if !reflect.DeepEqual(stat1, expectedStat1) {
-// 		t.Fatalf("stat1-1 dont match\nhave %+v\nwant %+v", stat1, expectedStat1)
-// 	}
-// 	mu.Unlock()
+	mu.Lock()
+	if !reflect.DeepEqual(stat1, expectedStat1) {
+		t.Fatalf("stat1-1 dont match\nhave %+v\nwant %+v", stat1, expectedStat1)
+	}
+	mu.Unlock()
 
-// 	_, err = biz.Add(getConsumerCtx("biz_admin"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	_, err = biz.Add(getConsumerCtx("biz_admin"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	wait(220) // 2+ sec
+	wait(220) // 2+ sec
 
-// 	expectedStat1 = &service.Stat{
-// 		Timestamp: 0,
-// 		ByMethod: map[string]uint64{
-// 			"/main.Biz/Add": 1,
-// 		},
-// 		ByConsumer: map[string]uint64{
-// 			"biz_admin": 1,
-// 		},
-// 	}
-// 	expectedStat2 := &service.Stat{
-// 		Timestamp: 0,
-// 		ByMethod: map[string]uint64{
-// 			"/main.Biz/Check": 1,
-// 			"/main.Biz/Add":   2,
-// 			"/main.Biz/Test":  1,
-// 		},
-// 		ByConsumer: map[string]uint64{
-// 			"biz_user":  2,
-// 			"biz_admin": 2,
-// 		},
-// 	}
+	expectedStat1 = &service.Stat{
+		Timestamp: 0,
+		ByMethod: map[string]uint64{
+			"/main.Biz/Add": 1,
+		},
+		ByConsumer: map[string]uint64{
+			"biz_admin": 1,
+		},
+	}
+	expectedStat2 := &service.Stat{
+		Timestamp: 0,
+		ByMethod: map[string]uint64{
+			"/main.Biz/Check": 1,
+			"/main.Biz/Add":   2,
+			"/main.Biz/Test":  1,
+		},
+		ByConsumer: map[string]uint64{
+			"biz_user":  2,
+			"biz_admin": 2,
+		},
+	}
 
-// 	mu.Lock()
-// 	if !reflect.DeepEqual(stat1, expectedStat1) {
-// 		t.Fatalf("stat1-2 dont match\nhave %+v\nwant %+v", stat1, expectedStat1)
-// 	}
-// 	if !reflect.DeepEqual(stat2, expectedStat2) {
-// 		t.Fatalf("stat2 dont match\nhave %+v\nwant %+v", stat2, expectedStat2)
-// 	}
-// 	mu.Unlock()
+	mu.Lock()
+	if !reflect.DeepEqual(stat1, expectedStat1) {
+		t.Fatalf("stat1-2 dont match\nhave %+v\nwant %+v", stat1, expectedStat1)
+	}
+	if !reflect.DeepEqual(stat2, expectedStat2) {
+		t.Fatalf("stat2 dont match\nhave %+v\nwant %+v", stat2, expectedStat2)
+	}
+	mu.Unlock()
 
-// 	finish()
-// }
+	finish()
+}

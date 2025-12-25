@@ -46,6 +46,7 @@ func (c *adminClient) Logging(ctx context.Context, in *Nothing, opts ...grpc.Cal
 	if err != nil {
 		return nil, err
 	}
+
 	x := &grpc.GenericClientStream[Nothing, Event]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err

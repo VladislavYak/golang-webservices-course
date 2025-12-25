@@ -2,7 +2,6 @@ package main
 
 // import (
 // 	"context"
-// 	"fmt"
 // 	"time"
 // )
 
@@ -13,23 +12,25 @@ package main
 // func main() {
 // 	println("usage: go test -v")
 
-// 	ctx, finish := context.WithCancel(context.Background())
+// 	ctx, _ := context.WithCancel(context.Background())
 
 // 	StartMyMicroservice(ctx, "127.0.0.1:8082", "")
 
-// 	fmt.Println("im here1")
-// 	wait(10)
-// 	finish() // при вызове этой функции ваш сервер должен остановиться и освободить порт
-// 	wait(1)
+// 	wait(1000000)
 
-// 	ctx, finish = context.WithCancel(context.Background())
-// 	StartMyMicroservice(ctx, "127.0.0.1:8082", "")
+// 	// fmt.Println("im here1")
+// 	// wait(10)
+// 	// finish() // при вызове этой функции ваш сервер должен остановиться и освободить порт
+// 	// wait(1)
 
-// 	fmt.Println("before waiting")
-// 	wait(1)
-// 	finish()
-// 	wait(1)
+// 	// ctx, finish = context.WithCancel(context.Background())
+// 	// StartMyMicroservice(ctx, "127.0.0.1:8082", "")
 
-// 	fmt.Println("im here2")
+// 	// fmt.Println("before waiting")
+// 	// wait(1)
+// 	// finish()
+// 	// wait(1)
+
+// 	// fmt.Println("im here2")
 
 // }
