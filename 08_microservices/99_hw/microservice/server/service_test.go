@@ -15,8 +15,10 @@ import (
 
 	"gitlab.com/vk-golang/lectures/08_microservices/99_hw/microservice/service"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -84,13 +86,22 @@ func TestServerStartStop(t *testing.T) {
 	fmt.Println("im here 2")
 }
 
-// // у вас наверняка будет что-то выполняться в отдельных горутинах
-// // этим тестом мы проверяем что вы останавливаете все горутины которые у вас были и нет утечек
-// // некоторый запас ( goroutinesPerTwoIterations*5 ) остаётся на случай рантайм горутин
+func dumpGoroutines(prefix string) {
+	fmt.Printf("\n=== %s | Goroutines: %d ===\n", prefix, runtime.NumGoroutine())
+	buf := make([]byte, 1<<20)
+	n := runtime.Stack(buf, true)
+	fmt.Print(string(buf[:n]))
+}
+
+// у вас наверняка будет что-то выполняться в отдельных горутинах
+// этим тестом мы проверяем что вы останавливаете все горутины которые у вас были и нет утечек
+// некоторый запас ( goroutinesPerTwoIterations*5 ) остаётся на случай рантайм горутин
 func TestServerLeak(t *testing.T) {
 	// return
 	goroutinesStart := runtime.NumGoroutine()
+	dumpGoroutines("BEFORE first")
 	TestServerStartStop(t)
+	dumpGoroutines("AFTER first")
 	goroutinesPerTwoIterations := runtime.NumGoroutine() - goroutinesStart
 
 	goroutinesStart = runtime.NumGoroutine()
@@ -98,6 +109,7 @@ func TestServerLeak(t *testing.T) {
 	for i := 0; i <= 25; i++ {
 		TestServerStartStop(t)
 		goroutinesStat = append(goroutinesStat, runtime.NumGoroutine())
+		runtime.NumGoroutine()
 	}
 	goroutinesPerFiftyIterations := runtime.NumGoroutine() - goroutinesStart
 	if goroutinesPerFiftyIterations > goroutinesPerTwoIterations*5 {
@@ -105,74 +117,74 @@ func TestServerLeak(t *testing.T) {
 	}
 }
 
-// // ACL (права на методы доступа) парсится корректно
-// func TestACLParseError(t *testing.T) {
-// 	// finish'а тут нет потому что стартовать у вас ничего не должно если не получилось распаковать ACL
-// 	err := StartMyMicroservice(context.Background(), listenAddr, "{.;")
-// 	if err == nil {
-// 		t.Fatalf("expacted error on bad acl json, have nil")
-// 	}
-// }
+// ACL (права на методы доступа) парсится корректно
+func TestACLParseError(t *testing.T) {
+	// finish'а тут нет потому что стартовать у вас ничего не должно если не получилось распаковать ACL
+	err := StartMyMicroservice(context.Background(), listenAddr, "{.;")
+	if err == nil {
+		t.Fatalf("expacted error on bad acl json, have nil")
+	}
+}
 
 // ACL (права на методы доступа) работает корректно
-// func TestACL(t *testing.T) {
-// 	wait(1)
-// 	ctx, finish := context.WithCancel(context.Background())
-// 	err := StartMyMicroservice(ctx, listenAddr, ACLData)
-// 	if err != nil {
-// 		t.Fatalf("cant start server initial: %v", err)
-// 	}
-// 	wait(1)
-// 	defer func() {
-// 		finish()
-// 		wait(1)
-// 	}()
+func TestACL(t *testing.T) {
+	wait(1)
+	ctx, finish := context.WithCancel(context.Background())
+	err := StartMyMicroservice(ctx, listenAddr, ACLData)
+	if err != nil {
+		t.Fatalf("cant start server initial: %v", err)
+	}
+	wait(1)
+	defer func() {
+		finish()
+		wait(1)
+	}()
 
-// 	conn := getGrpcConn(t)
-// 	defer conn.Close()
+	conn := getGrpcConn(t)
+	defer conn.Close()
 
-// 	biz := service.NewBizClient(conn)
-// 	adm := service.NewAdminClient(conn)
+	biz := service.NewBizClient(conn)
+	adm := service.NewAdminClient(conn)
 
-// 	for idx, ctx := range []context.Context{
-// 		context.Background(),       // нет поля для ACL
-// 		getConsumerCtx("unknown"),  // поле есть, неизвестный консюмер
-// 		getConsumerCtx("biz_user"), // поле есть, нет доступа
-// 	} {
-// 		_, err = biz.Test(ctx, &service.Nothing{})
-// 		if err == nil {
-// 			t.Fatalf("[%d] ACL fail: expected err on disallowed method", idx)
-// 		} else if code := status.Code(err); code != codes.Unauthenticated {
-// 			t.Fatalf("[%d] ACL fail: expected Unauthenticated code, got %v", idx, code)
-// 		}
-// 	}
+	for idx, ctx := range []context.Context{
+		context.Background(),       // нет поля для ACL
+		getConsumerCtx("unknown"),  // поле есть, неизвестный консюмер
+		getConsumerCtx("biz_user"), // поле есть, нет доступа
+	} {
+		_, err = biz.Test(ctx, &service.Nothing{})
+		if err == nil {
+			t.Fatalf("[%d] ACL fail: expected err on disallowed method", idx)
+		} else if code := status.Code(err); code != codes.Unauthenticated {
+			t.Fatalf("[%d] ACL fail: expected Unauthenticated code, got %v", idx, code)
+		}
+	}
 
-// 	// есть доступ
-// 	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatalf("ACL fail: unexpected error: %v", err)
-// 	}
-// 	_, err = biz.Check(getConsumerCtx("biz_admin"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatalf("ACL fail: unexpected error: %v", err)
-// 	}
-// 	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatalf("ACL fail: unexpected error: %v", err)
-// 	}
+	// есть доступ
+	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
+	if err != nil {
+		t.Fatalf("ACL fail: unexpected error: %v", err)
+	}
+	_, err = biz.Check(getConsumerCtx("biz_admin"), &service.Nothing{})
+	if err != nil {
+		t.Fatalf("ACL fail: unexpected error: %v", err)
+	}
+	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
+	if err != nil {
+		t.Fatalf("ACL fail: unexpected error: %v", err)
+	}
 
-// 	// ACL на методах, которые возвращают поток данных
-// 	logger, err := adm.Logging(getConsumerCtx("unknown"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	_, err = logger.Recv()
-// 	if err == nil {
-// 		t.Fatalf("ACL fail: expected err on disallowed method")
-// 	} else if code := status.Code(err); code != codes.Unauthenticated {
-// 		t.Fatalf("ACL fail: expected Unauthenticated code, got %v", code)
-// 	}
-// }
+	// ACL на методах, которые возвращают поток данных
+	logger, err := adm.Logging(getConsumerCtx("unknown"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = logger.Recv()
+	if err == nil {
+		t.Fatalf("ACL fail: expected err on disallowed method")
+	} else if code := status.Code(err); code != codes.Unauthenticated {
+		t.Fatalf("ACL fail: expected Unauthenticated code, got %v", code)
+	}
+}
 
 func TestLogging(t *testing.T) {
 	ctx, finish := context.WithCancel(context.Background())
@@ -299,7 +311,7 @@ func TestLogging(t *testing.T) {
 	fmt.Println("-----")
 
 	fmt.Println("logData1[0]", logData1[0])
-	fmt.Println("logData2[0]", logData1[0])
+	fmt.Println("logData2[0]", logData2[0])
 
 	fmt.Println("logData1[0], expectedLogData1[0]", logData1[0], expectedLogData1[0])
 	fmt.Println("logData1[1], expectedLogData1[1]", logData1[1], expectedLogData1[1])
@@ -320,6 +332,131 @@ func TestLogging(t *testing.T) {
 		t.Fatalf("logs2 dont match\nhave %+v\nwant %+v", logData2, expectedLogData2)
 	}
 }
+
+// func TestLogging(t *testing.T) {
+// 	ctx, finish := context.WithCancel(context.Background())
+// 	err := StartMyMicroservice(ctx, listenAddr, ACLData)
+// 	if err != nil {
+// 		t.Fatalf("cant start server initial: %v", err)
+// 	}
+// 	wait(1)
+// 	defer func() {
+// 		finish()
+// 		wait(1)
+// 	}()
+
+// 	conn := getGrpcConn(t)
+// 	defer conn.Close()
+
+// 	biz := service.NewBizClient(conn)
+// 	adm := service.NewAdminClient(conn)
+
+// 	logStream1, err := adm.Logging(getConsumerCtx("logger"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	time.Sleep(1 * time.Millisecond)
+
+// 	logStream2, err := adm.Logging(getConsumerCtx("logger"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+
+// 	logData1 := []*service.Event{}
+// 	logData2 := []*service.Event{}
+
+// 	wait(1)
+
+// 	go func() {
+// 		select {
+// 		case <-ctx.Done():
+// 			return
+// 		case <-time.After(3 * time.Second):
+// 			fmt.Println("looks like you dont send anything to log stream in 3 sec")
+// 			t.Errorf("looks like you dont send anything to log stream in 3 sec")
+// 		}
+// 	}()
+
+// 	wg := &sync.WaitGroup{}
+// 	wg.Add(2)
+// 	go func() {
+// 		defer wg.Done()
+// 		for i := 0; i < 4; i++ {
+// 			evt, errTmp := logStream1.Recv()
+// 			// log.Println("logger 1", evt, errTmp)
+// 			if errTmp != nil {
+// 				t.Errorf("unexpected error: %v, awaiting event", errTmp)
+// 				return
+// 			}
+// 			if !strings.HasPrefix(evt.GetHost(), "127.0.0.1:") || evt.GetHost() == listenAddr {
+// 				t.Errorf("bad host: %v", evt.GetHost())
+// 				return
+// 			}
+// 			// это грязный хак
+// 			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
+// 			// поэтому берем не оригинал сообщения, а только нужные значения
+// 			logData1 = append(logData1, &service.Event{Consumer: evt.Consumer, Method: evt.Method})
+// 		}
+// 	}()
+// 	go func() {
+// 		defer wg.Done()
+// 		for i := 0; i < 3; i++ {
+// 			evt, errTmp := logStream2.Recv()
+// 			// log.Println("logger 2", evt, errTmp)
+// 			if errTmp != nil {
+// 				t.Errorf("unexpected error: %v, awaiting event", errTmp)
+// 				return
+// 			}
+// 			if !strings.HasPrefix(evt.GetHost(), "127.0.0.1:") || evt.GetHost() == listenAddr {
+// 				t.Errorf("bad host: %v", evt.GetHost())
+// 				return
+// 			}
+// 			// это грязный хак
+// 			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
+// 			// поэтому берем не оригинал сообщения, а только нужные значения
+// 			logData2 = append(logData2, &service.Event{Consumer: evt.Consumer, Method: evt.Method})
+// 		}
+// 	}()
+
+// 	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	time.Sleep(2 * time.Millisecond)
+
+// 	_, err = biz.Check(getConsumerCtx("biz_admin"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	time.Sleep(2 * time.Millisecond)
+
+// 	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	time.Sleep(2 * time.Millisecond)
+
+// 	wg.Wait()
+
+// 	expectedLogData1 := []*service.Event{
+// 		{Consumer: "logger", Method: "/main.Admin/Logging"},
+// 		{Consumer: "biz_user", Method: "/main.Biz/Check"},
+// 		{Consumer: "biz_admin", Method: "/main.Biz/Check"},
+// 		{Consumer: "biz_admin", Method: "/main.Biz/Test"},
+// 	}
+// 	expectedLogData2 := []*service.Event{
+// 		{Consumer: "biz_user", Method: "/main.Biz/Check"},
+// 		{Consumer: "biz_admin", Method: "/main.Biz/Check"},
+// 		{Consumer: "biz_admin", Method: "/main.Biz/Test"},
+// 	}
+
+// 	if !reflect.DeepEqual(logData1, expectedLogData1) {
+// 		t.Fatalf("logs1 dont match\nhave %+v\nwant %+v", logData1, expectedLogData1)
+// 	}
+// 	if !reflect.DeepEqual(logData2, expectedLogData2) {
+// 		t.Fatalf("logs2 dont match\nhave %+v\nwant %+v", logData2, expectedLogData2)
+// 	}
+// }
 
 func TestStat(t *testing.T) {
 	ctx, finish := context.WithCancel(context.Background())

@@ -53,8 +53,9 @@ func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 	go func() {
 		fmt.Println("im before ctx.done")
 		<-ctx.Done()
+		close(loggingChannel)
 		fmt.Println("context canceled, stopping server")
-		server.Stop()
+		server.GracefulStop()
 	}()
 
 	fmt.Println("im afer go func")
@@ -75,9 +76,12 @@ func NewBroadcaster(loggingChan chan service.Event, subs *map[service.Admin_Logg
 
 func (b *Broadcaster) StartBroadcast() {
 	// yakovlev:
+
 	for v := range b.loggingChan {
 		fmt.Println("Broadcaster | v.Method", v.Method)
 		// fmt.Println("im here read from channel and will be sending to all subs")
+
+		b.mu.Lock()
 		fmt.Println("len b.subs", len(*b.subs))
 		for stream := range *b.subs {
 
@@ -90,37 +94,35 @@ func (b *Broadcaster) StartBroadcast() {
 			fmt.Println("Broadcaster | After send")
 		}
 
+		b.mu.Unlock()
+
 	}
-}
-
-type wrappedServerStream struct {
-	grpc.ServerStream
-	myChan chan service.Event
-	info   *grpc.StreamServerInfo
-}
-
-func (w *wrappedServerStream) SendMsg(m any) error {
-	// fmt.Printf("Intercepted server Send: %v\n", m)
-
-	// w.myChan <- service.Event{Method: w.info.FullMethod}
-
-	// Call the original Send method
-	return w.ServerStream.SendMsg(m)
 }
 
 func StreamLoggingInterceptor(inChan chan service.Event) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 
-		wrappedStream := &wrappedServerStream{
-			ServerStream: ss,
-			info:         info,
-			myChan:       inChan,
-		}
 		// tmp hardcode
-		inChan <- service.Event{Method: info.FullMethod, Consumer: "logger", Host: "127.0.0.1:58879"}
-		// fmt.Println("FullMethod", info.FullMethod)
+		ctx := ss.Context()
 
-		return handler(srv, wrappedStream)
+		// 1. HOST из peer
+		host := ""
+		if p, ok := peer.FromContext(ctx); ok {
+			host = p.Addr.String() // "127.0.0.1:59292"
+		}
+
+		// 2. CONSUMER из metadata
+		consumer := ""
+		if md, ok := metadata.FromIncomingContext(ctx); ok {
+			if values := md.Get("consumer"); len(values) > 0 {
+				consumer = values[0] // "logger", "biz_user"
+			}
+		}
+		inChan <- service.Event{Consumer: consumer,
+			Method: info.FullMethod,
+			Host:   host}
+
+		return handler(srv, ss)
 	}
 }
 
