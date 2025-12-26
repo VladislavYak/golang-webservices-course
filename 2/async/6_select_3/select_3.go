@@ -16,6 +16,7 @@ func main() {
 				close(dataCh)
 				return
 			case dataCh <- val:
+				fmt.Println("im here, val:", val)
 				val++
 			}
 		}
