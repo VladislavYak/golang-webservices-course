@@ -35,11 +35,11 @@ func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 	}
 
 	server := grpc.NewServer(
-		grpc.StreamInterceptor(StreamLoggingInterceptor(loggingChannel)),
-		grpc.UnaryInterceptor(UnaryLoggingInterceptor(loggingChannel)),
+		grpc.StreamInterceptor(StreamLoggingInterceptor(loggingChannel, addSubCh)),
+		grpc.UnaryInterceptor(UnaryLoggingInterceptor(loggingChannel, addSubCh)),
 	)
 	service.RegisterBizServer(server, NewBiz())
-	service.RegisterAdminServer(server, NewAdmin(&subs, mu, addSubCh))
+	service.RegisterAdminServer(server, NewAdmin(&subs, mu))
 
 	fmt.Printf("starting server at %s\n", addr)
 
@@ -73,7 +73,6 @@ func NewBroadcaster(loggingChan chan service.Event, addSubCh chan struct{}, subs
 func (b *Broadcaster) StartBroadcast() {
 	// yakovlev:
 	// maybe add here channel for starting broadcasting only when having available subscribers?
-	// <-availableSubsCh
 
 	for v := range b.loggingChan {
 		// fmt.Println("im here read from channel and will be sending to all subs")
@@ -91,11 +90,12 @@ func (b *Broadcaster) StartBroadcast() {
 		}
 
 		b.mu.Unlock()
+		b.addSubCh <- struct{}{}
 
 	}
 }
 
-func StreamLoggingInterceptor(inChan chan service.Event) grpc.StreamServerInterceptor {
+func StreamLoggingInterceptor(inChan chan service.Event, addSubCh chan struct{}) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 
 		// tmp hardcode
@@ -118,11 +118,13 @@ func StreamLoggingInterceptor(inChan chan service.Event) grpc.StreamServerInterc
 			Method: info.FullMethod,
 			Host:   host}
 
+		<-addSubCh // Ждём завершения broadcasting'а перед вызовом handler
+
 		return handler(srv, ss)
 	}
 }
 
-func UnaryLoggingInterceptor(inChan chan service.Event) grpc.UnaryServerInterceptor {
+func UnaryLoggingInterceptor(inChan chan service.Event, addSubCh chan struct{}) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 
 		host := ""
@@ -139,19 +141,20 @@ func UnaryLoggingInterceptor(inChan chan service.Event) grpc.UnaryServerIntercep
 		}
 		inChan <- service.Event{Method: info.FullMethod, Host: host, Consumer: consumer}
 
+		<-addSubCh // Ждём завершения broadcasting'а перед вызовом handler
+
 		return handler(ctx, req)
 	}
 }
 
 type Admin struct {
 	service.UnimplementedAdminServer
-	mu       *sync.Mutex
-	subs     *map[service.Admin_LoggingServer]bool
-	addSubCh chan struct{}
+	mu   *sync.Mutex
+	subs *map[service.Admin_LoggingServer]bool
 }
 
-func NewAdmin(subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex, addSubCh chan struct{}) *Admin {
-	return &Admin{subs: subs, mu: mu, addSubCh: addSubCh}
+func NewAdmin(subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex) *Admin {
+	return &Admin{subs: subs, mu: mu}
 }
 
 func (a *Admin) Logging(myNothing *service.Nothing, myStream grpc.ServerStreamingServer[service.Event]) error {
@@ -159,7 +162,6 @@ func (a *Admin) Logging(myNothing *service.Nothing, myStream grpc.ServerStreamin
 	(*a.subs)[myStream] = true // ← stream уникален!
 	a.mu.Unlock()
 
-	// a.addSubCh <- struct{}{}
 	// yakovlev: have no idea what is is, but lets just add that
 	<-myStream.Context().Done()
 
