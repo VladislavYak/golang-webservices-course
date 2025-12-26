@@ -13,8 +13,10 @@ import (
 
 	"gitlab.com/vk-golang/lectures/08_microservices/99_hw/microservice/service"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -105,73 +107,73 @@ func TestServerLeak(t *testing.T) {
 }
 
 // ACL (права на методы доступа) парсится корректно
-// func TestACLParseError(t *testing.T) {
-// 	// finish'а тут нет потому что стартовать у вас ничего не должно если не получилось распаковать ACL
-// 	err := StartMyMicroservice(context.Background(), listenAddr, "{.;")
-// 	if err == nil {
-// 		t.Fatalf("expacted error on bad acl json, have nil")
-// 	}
-// }
+func TestACLParseError(t *testing.T) {
+	// finish'а тут нет потому что стартовать у вас ничего не должно если не получилось распаковать ACL
+	err := StartMyMicroservice(context.Background(), listenAddr, "{.;")
+	if err == nil {
+		t.Fatalf("expacted error on bad acl json, have nil")
+	}
+}
 
 // ACL (права на методы доступа) работает корректно
-// func TestACL(t *testing.T) {
-// 	wait(1)
-// 	ctx, finish := context.WithCancel(context.Background())
-// 	err := StartMyMicroservice(ctx, listenAddr, ACLData)
-// 	if err != nil {
-// 		t.Fatalf("cant start server initial: %v", err)
-// 	}
-// 	wait(1)
-// 	defer func() {
-// 		finish()
-// 		wait(1)
-// 	}()
+func TestACL(t *testing.T) {
+	wait(1)
+	ctx, finish := context.WithCancel(context.Background())
+	err := StartMyMicroservice(ctx, listenAddr, ACLData)
+	if err != nil {
+		t.Fatalf("cant start server initial: %v", err)
+	}
+	wait(1)
+	defer func() {
+		finish()
+		wait(1)
+	}()
 
-// 	conn := getGrpcConn(t)
-// 	defer conn.Close()
+	conn := getGrpcConn(t)
+	defer conn.Close()
 
-// 	biz := service.NewBizClient(conn)
-// 	adm := service.NewAdminClient(conn)
+	biz := service.NewBizClient(conn)
+	adm := service.NewAdminClient(conn)
 
-// 	for idx, ctx := range []context.Context{
-// 		context.Background(),       // нет поля для ACL
-// 		getConsumerCtx("unknown"),  // поле есть, неизвестный консюмер
-// 		getConsumerCtx("biz_user"), // поле есть, нет доступа
-// 	} {
-// 		_, err = biz.Test(ctx, &service.Nothing{})
-// 		if err == nil {
-// 			t.Fatalf("[%d] ACL fail: expected err on disallowed method", idx)
-// 		} else if code := status.Code(err); code != codes.Unauthenticated {
-// 			t.Fatalf("[%d] ACL fail: expected Unauthenticated code, got %v", idx, code)
-// 		}
-// 	}
+	for idx, ctx := range []context.Context{
+		context.Background(),       // нет поля для ACL
+		getConsumerCtx("unknown"),  // поле есть, неизвестный консюмер
+		getConsumerCtx("biz_user"), // поле есть, нет доступа
+	} {
+		_, err = biz.Test(ctx, &service.Nothing{})
+		if err == nil {
+			t.Fatalf("[%d] ACL fail: expected err on disallowed method", idx)
+		} else if code := status.Code(err); code != codes.Unauthenticated {
+			t.Fatalf("[%d] ACL fail: expected Unauthenticated code, got %v", idx, code)
+		}
+	}
 
-// 	// есть доступ
-// 	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatalf("ACL fail: unexpected error: %v", err)
-// 	}
-// 	_, err = biz.Check(getConsumerCtx("biz_admin"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatalf("ACL fail: unexpected error: %v", err)
-// 	}
-// 	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatalf("ACL fail: unexpected error: %v", err)
-// 	}
+	// есть доступ
+	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
+	if err != nil {
+		t.Fatalf("ACL fail: unexpected error: %v", err)
+	}
+	_, err = biz.Check(getConsumerCtx("biz_admin"), &service.Nothing{})
+	if err != nil {
+		t.Fatalf("ACL fail: unexpected error: %v", err)
+	}
+	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
+	if err != nil {
+		t.Fatalf("ACL fail: unexpected error: %v", err)
+	}
 
-// 	// ACL на методах, которые возвращают поток данных
-// 	logger, err := adm.Logging(getConsumerCtx("unknown"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	_, err = logger.Recv()
-// 	if err == nil {
-// 		t.Fatalf("ACL fail: expected err on disallowed method")
-// 	} else if code := status.Code(err); code != codes.Unauthenticated {
-// 		t.Fatalf("ACL fail: expected Unauthenticated code, got %v", code)
-// 	}
-// }
+	// ACL на методах, которые возвращают поток данных
+	logger, err := adm.Logging(getConsumerCtx("unknown"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = logger.Recv()
+	if err == nil {
+		t.Fatalf("ACL fail: expected err on disallowed method")
+	} else if code := status.Code(err); code != codes.Unauthenticated {
+		t.Fatalf("ACL fail: expected Unauthenticated code, got %v", code)
+	}
+}
 
 func TestLogging(t *testing.T) {
 	ctx, finish := context.WithCancel(context.Background())
