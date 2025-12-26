@@ -22,12 +22,11 @@ var _ service.AdminServer = (*Admin)(nil)
 func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 	loggingChannel := make(chan service.Event)
 	subs := map[service.Admin_LoggingServer]bool{}
+	addSubCh := make(chan struct{})
 	mu := &sync.Mutex{}
 	// create channel for statistics
-	// create channel for logging
-	// need to push data to that channels somehow
 
-	broadcaster := NewBroadcaster(loggingChannel, &subs, mu)
+	broadcaster := NewBroadcaster(loggingChannel, addSubCh, &subs, mu)
 	go broadcaster.StartBroadcast()
 
 	lis, err := net.Listen("tcp", addr)
@@ -40,7 +39,7 @@ func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 		grpc.UnaryInterceptor(UnaryLoggingInterceptor(loggingChannel)),
 	)
 	service.RegisterBizServer(server, NewBiz())
-	service.RegisterAdminServer(server, NewAdmin(&subs, mu))
+	service.RegisterAdminServer(server, NewAdmin(&subs, mu, addSubCh))
 
 	fmt.Printf("starting server at %s\n", addr)
 
@@ -51,47 +50,44 @@ func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 	})
 
 	go func() {
-		fmt.Println("im before ctx.done")
 		<-ctx.Done()
 		close(loggingChannel)
-		fmt.Println("context canceled, stopping server")
 		server.GracefulStop()
 	}()
-
-	fmt.Println("im afer go func")
 
 	return nil
 }
 
 type Broadcaster struct {
 	loggingChan chan service.Event
+	addSubCh    chan struct{}
 	mu          *sync.Mutex
 	subs        *map[service.Admin_LoggingServer]bool
 }
 
-func NewBroadcaster(loggingChan chan service.Event, subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex) *Broadcaster {
+func NewBroadcaster(loggingChan chan service.Event, addSubCh chan struct{}, subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex) *Broadcaster {
 
-	return &Broadcaster{loggingChan: loggingChan, mu: mu, subs: subs}
+	return &Broadcaster{loggingChan: loggingChan, addSubCh: addSubCh, mu: mu, subs: subs}
 }
 
 func (b *Broadcaster) StartBroadcast() {
 	// yakovlev:
+	// maybe add here channel for starting broadcasting only when having available subscribers?
+	// <-availableSubsCh
 
 	for v := range b.loggingChan {
-		fmt.Println("Broadcaster | v.Method", v.Method)
 		// fmt.Println("im here read from channel and will be sending to all subs")
 
+		// <-b.addSubCh
 		b.mu.Lock()
-		fmt.Println("len b.subs", len(*b.subs))
 		for stream := range *b.subs {
 
 			// fmt.Println("stream", stream)
-			fmt.Println("Broadcaster | v.Method", v.Method)
 
-			go func() {
-				stream.Send(&v)
-			}()
-			fmt.Println("Broadcaster | After send")
+			stream.Send(&v)
+			// go func() {
+			// 	stream.Send(&v)
+			// }()
 		}
 
 		b.mu.Unlock()
@@ -128,7 +124,6 @@ func StreamLoggingInterceptor(inChan chan service.Event) grpc.StreamServerInterc
 
 func UnaryLoggingInterceptor(inChan chan service.Event) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
-		fmt.Println("im in unary logginc interceptor, info.FullMethod", info.FullMethod)
 
 		host := ""
 		if p, ok := peer.FromContext(ctx); ok {
@@ -142,10 +137,7 @@ func UnaryLoggingInterceptor(inChan chan service.Event) grpc.UnaryServerIntercep
 				consumer = values[0]
 			}
 		}
-		fmt.Println("Host: host", host)
 		inChan <- service.Event{Method: info.FullMethod, Host: host, Consumer: consumer}
-
-		fmt.Println("after send UnaryLoggingInterceptor")
 
 		return handler(ctx, req)
 	}
@@ -153,60 +145,27 @@ func UnaryLoggingInterceptor(inChan chan service.Event) grpc.UnaryServerIntercep
 
 type Admin struct {
 	service.UnimplementedAdminServer
-	mu   *sync.Mutex
-	subs *map[service.Admin_LoggingServer]bool
+	mu       *sync.Mutex
+	subs     *map[service.Admin_LoggingServer]bool
+	addSubCh chan struct{}
 }
 
-func NewAdmin(subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex) *Admin {
-	return &Admin{subs: subs, mu: mu}
+func NewAdmin(subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex, addSubCh chan struct{}) *Admin {
+	return &Admin{subs: subs, mu: mu, addSubCh: addSubCh}
 }
 
 func (a *Admin) Logging(myNothing *service.Nothing, myStream grpc.ServerStreamingServer[service.Event]) error {
-	fmt.Println("before reading from Loggin channel")
-
 	a.mu.Lock()
 	(*a.subs)[myStream] = true // ← stream уникален!
 	a.mu.Unlock()
 
+	// a.addSubCh <- struct{}{}
 	// yakovlev: have no idea what is is, but lets just add that
 	<-myStream.Context().Done()
-
-	fmt.Println("im afater <-myStream.Context().Done() Logging")
 
 	a.mu.Lock()
 	delete(*a.subs, myStream) // ← stream уникален!
 	a.mu.Unlock()
-
-	// for methodName := range a.myChan {
-	// 	// fmt.Println("im inside loop logging")
-	// 	// fmt.Println("read", methodName)
-	// 	myStream.Send(&service.Event{Method: methodName})
-
-	// }
-
-	// for {
-	// 	fmt.Println("im here")
-	// 	methodName := <-a.myChan
-	// 	fmt.Println("after recieve")
-
-	// 	myStream.Send(&service.Event{Method: methodName})
-
-	// 	// myStream.SendMsg(&service.Event{Method: "test"})
-
-	// 	time.Sleep(time.Second * 5)
-	// }
-
-	// for {
-	// 	fmt.Println("im here")
-	// 	// methodName := <-a.myChan
-	// 	fmt.Println("after recieve")
-
-	// 	myStream.Send(&service.Event{Method: "test"})
-
-	// 	// myStream.SendMsg(&service.Event{Method: "test"})
-
-	// 	time.Sleep(time.Second * 5)
-	// }
 	return nil
 
 }
