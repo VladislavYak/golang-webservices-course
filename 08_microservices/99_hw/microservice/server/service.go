@@ -4,6 +4,7 @@ import (
 	context "context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"strings"
 	"sync"
@@ -25,6 +26,7 @@ var _ service.BizServer = (*Biz)(nil)
 var _ service.AdminServer = (*Admin)(nil)
 
 // yakovlev: what about atomic.AddInt32(&totalOperations, 1)?
+// yakovlev: split on several files - lazy
 type CountersState struct {
 	mu         *sync.Mutex
 	ByMethod   map[string]uint64
@@ -49,14 +51,10 @@ func (cs *CountersState) Snapshot() (map[string]uint64, map[string]uint64) {
 	defer cs.mu.Unlock()
 
 	snapMethod := make(map[string]uint64, len(cs.ByMethod))
-	for k, v := range cs.ByMethod {
-		snapMethod[k] = v
-	}
+	maps.Copy(snapMethod, cs.ByMethod)
 
 	snapConsumer := make(map[string]uint64, len(cs.ByConsumer))
-	for k, v := range cs.ByConsumer {
-		snapConsumer[k] = v
-	}
+	maps.Copy(snapConsumer, cs.ByConsumer)
 
 	return snapMethod, snapConsumer
 }
@@ -64,17 +62,17 @@ func (cs *CountersState) Snapshot() (map[string]uint64, map[string]uint64) {
 func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 	var aclProcessed map[string][]string
 	if err := json.Unmarshal([]byte(acl), &aclProcessed); err != nil {
+		// yakovlev: add correct error handling here
 		return fmt.Errorf("failed to parse ACL: %w", err)
 	}
 
 	CountersState := NewCountersState()
 	loggingChannel := make(chan service.Event)
 	subs := map[service.Admin_LoggingServer]bool{}
-	addSubCh := make(chan struct{})
+	sendDone := make(chan struct{})
 	mu := &sync.Mutex{}
-	// create channel for statistics
 
-	broadcaster := NewBroadcaster(loggingChannel, addSubCh, &subs, mu)
+	broadcaster := NewBroadcaster(loggingChannel, sendDone, &subs, mu)
 	go broadcaster.StartBroadcast()
 
 	lis, err := net.Listen("tcp", addr)
@@ -85,12 +83,12 @@ func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			UnaryACLInterceptor(aclProcessed),
-			UnaryLoggingInterceptor(loggingChannel, addSubCh),
+			UnaryLoggingInterceptor(loggingChannel, sendDone),
 			UnaryCountersInterceptor(CountersState),
 		),
 		grpc.ChainStreamInterceptor(
 			StreamACLInterceptor(aclProcessed),
-			StreamLoggingInterceptor(loggingChannel, addSubCh),
+			StreamLoggingInterceptor(loggingChannel, sendDone),
 			StreamCountersInterceptor(CountersState),
 		),
 	)
@@ -108,7 +106,7 @@ func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 	go func() {
 		<-ctx.Done()
 		close(loggingChannel)
-		close(addSubCh)
+		close(sendDone)
 		server.GracefulStop()
 	}()
 
@@ -117,14 +115,14 @@ func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 
 type Broadcaster struct {
 	loggingChan chan service.Event
-	addSubCh    chan struct{}
+	sendDone    chan struct{}
 	mu          *sync.Mutex
 	subs        *map[service.Admin_LoggingServer]bool
 }
 
-func NewBroadcaster(loggingChan chan service.Event, addSubCh chan struct{}, subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex) *Broadcaster {
+func NewBroadcaster(loggingChan chan service.Event, sendDone chan struct{}, subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex) *Broadcaster {
 
-	return &Broadcaster{loggingChan: loggingChan, addSubCh: addSubCh, mu: mu, subs: subs}
+	return &Broadcaster{loggingChan: loggingChan, sendDone: sendDone, mu: mu, subs: subs}
 }
 
 func (b *Broadcaster) StartBroadcast() {
@@ -137,7 +135,7 @@ func (b *Broadcaster) StartBroadcast() {
 		}
 
 		b.mu.Unlock()
-		b.addSubCh <- struct{}{}
+		b.sendDone <- struct{}{}
 
 	}
 }
@@ -175,7 +173,7 @@ func isAllowed(acl map[string][]string, consumer, fullMethod string) bool {
 	return false
 }
 
-func StreamLoggingInterceptor(inChan chan service.Event, addSubCh chan struct{}) grpc.StreamServerInterceptor {
+func StreamLoggingInterceptor(inChan chan service.Event, sendDone chan struct{}) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		ctx := ss.Context()
 
@@ -196,7 +194,7 @@ func StreamLoggingInterceptor(inChan chan service.Event, addSubCh chan struct{})
 			Method: info.FullMethod,
 			Host:   host}
 
-		<-addSubCh // Ждём завершения broadcasting'а перед вызовом handler
+		<-sendDone // Ждём завершения broadcasting'а перед вызовом handler
 
 		return handler(srv, ss)
 	}
@@ -231,7 +229,7 @@ func StreamACLInterceptor(acl map[string][]string) grpc.StreamServerInterceptor 
 	}
 }
 
-func UnaryLoggingInterceptor(inChan chan service.Event, addSubCh chan struct{}) grpc.UnaryServerInterceptor {
+func UnaryLoggingInterceptor(inChan chan service.Event, sendDone chan struct{}) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 
 		host := ""
@@ -248,7 +246,7 @@ func UnaryLoggingInterceptor(inChan chan service.Event, addSubCh chan struct{}) 
 		}
 		inChan <- service.Event{Method: info.FullMethod, Host: host, Consumer: consumer}
 
-		<-addSubCh // Ждём завершения broadcasting'а перед вызовом handler
+		<-sendDone // Ждём завершения broadcasting'а перед вызовом handler
 
 		return handler(ctx, req)
 	}
