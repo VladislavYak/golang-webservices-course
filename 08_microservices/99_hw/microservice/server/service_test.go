@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"reflect"
 	"runtime"
 	"strings"
@@ -300,157 +301,157 @@ func TestLogging(t *testing.T) {
 	}
 }
 
-// func TestStat(t *testing.T) {
-// 	ctx, finish := context.WithCancel(context.Background())
-// 	err := StartMyMicroservice(ctx, listenAddr, ACLData)
-// 	if err != nil {
-// 		t.Fatalf("cant start server initial: %v", err)
-// 	}
-// 	wait(1)
-// 	defer func() {
-// 		finish()
-// 		wait(2)
-// 	}()
+func TestStat(t *testing.T) {
+	ctx, finish := context.WithCancel(context.Background())
+	err := StartMyMicroservice(ctx, listenAddr, ACLData)
+	if err != nil {
+		t.Fatalf("cant start server initial: %v", err)
+	}
+	wait(1)
+	defer func() {
+		finish()
+		wait(2)
+	}()
 
-// 	conn := getGrpcConn(t)
-// 	defer conn.Close()
+	conn := getGrpcConn(t)
+	defer conn.Close()
 
-// 	biz := service.NewBizClient(conn)
-// 	adm := service.NewAdminClient(conn)
+	biz := service.NewBizClient(conn)
+	adm := service.NewAdminClient(conn)
 
-// 	statStream1, err := adm.Statistics(getConsumerCtx("stat"), &service.StatInterval{IntervalSeconds: 2})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	wait(1)
-// 	statStream2, err := adm.Statistics(getConsumerCtx("stat"), &service.StatInterval{IntervalSeconds: 3})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	statStream1, err := adm.Statistics(getConsumerCtx("stat"), &service.StatInterval{IntervalSeconds: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wait(1)
+	statStream2, err := adm.Statistics(getConsumerCtx("stat"), &service.StatInterval{IntervalSeconds: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	mu := &sync.Mutex{}
-// 	stat1 := &service.Stat{}
-// 	stat2 := &service.Stat{}
+	mu := &sync.Mutex{}
+	stat1 := &service.Stat{}
+	stat2 := &service.Stat{}
 
-// 	wg := &sync.WaitGroup{}
-// 	wg.Add(2)
-// 	go func() {
-// 		for {
-// 			stat, errTmp := statStream1.Recv()
-// 			if errTmp != nil && errTmp != io.EOF {
-// 				// fmt.Printf("unexpected error %v\n", errTmp)
-// 				return
-// 			} else if errTmp == io.EOF {
-// 				break
-// 			}
-// 			// log.Println("stat1", stat, errTmp)
-// 			mu.Lock()
-// 			// это грязный хак
-// 			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
-// 			// поэтому берем не оригинал сообщения, а только нужные значения
-// 			stat1 = &service.Stat{
-// 				ByMethod:   stat.ByMethod,
-// 				ByConsumer: stat.ByConsumer,
-// 			}
-// 			mu.Unlock()
-// 		}
-// 	}()
-// 	go func() {
-// 		for {
-// 			stat, errTmp := statStream2.Recv()
-// 			if errTmp != nil && errTmp != io.EOF {
-// 				// fmt.Printf("unexpected error %v\n", errTmp)
-// 				return
-// 			} else if errTmp == io.EOF {
-// 				break
-// 			}
-// 			// log.Println("stat2", stat, errTmp)
-// 			mu.Lock()
-// 			// это грязный хак
-// 			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
-// 			// поэтому берем не оригинал сообщения, а только нужные значения
-// 			stat2 = &service.Stat{
-// 				ByMethod:   stat.ByMethod,
-// 				ByConsumer: stat.ByConsumer,
-// 			}
-// 			mu.Unlock()
-// 		}
-// 	}()
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		for {
+			stat, errTmp := statStream1.Recv()
+			if errTmp != nil && errTmp != io.EOF {
+				// fmt.Printf("unexpected error %v\n", errTmp)
+				return
+			} else if errTmp == io.EOF {
+				break
+			}
+			// log.Println("stat1", stat, errTmp)
+			mu.Lock()
+			// это грязный хак
+			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
+			// поэтому берем не оригинал сообщения, а только нужные значения
+			stat1 = &service.Stat{
+				ByMethod:   stat.ByMethod,
+				ByConsumer: stat.ByConsumer,
+			}
+			mu.Unlock()
+		}
+	}()
+	go func() {
+		for {
+			stat, errTmp := statStream2.Recv()
+			if errTmp != nil && errTmp != io.EOF {
+				// fmt.Printf("unexpected error %v\n", errTmp)
+				return
+			} else if errTmp == io.EOF {
+				break
+			}
+			// log.Println("stat2", stat, errTmp)
+			mu.Lock()
+			// это грязный хак
+			// protobuf добавляет к структуре свои поля, которвые не видны при приведении к строке и при reflect.DeepEqual
+			// поэтому берем не оригинал сообщения, а только нужные значения
+			stat2 = &service.Stat{
+				ByMethod:   stat.ByMethod,
+				ByConsumer: stat.ByConsumer,
+			}
+			mu.Unlock()
+		}
+	}()
 
-// 	wait(1)
+	wait(1)
 
-// 	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	_, err = biz.Add(getConsumerCtx("biz_user"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	_, err = biz.Check(getConsumerCtx("biz_user"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = biz.Add(getConsumerCtx("biz_user"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = biz.Test(getConsumerCtx("biz_admin"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	wait(200) // 2 sec
+	wait(200) // 2 sec
 
-// 	expectedStat1 := &service.Stat{
-// 		ByMethod: map[string]uint64{
-// 			"/main.Biz/Check":        1,
-// 			"/main.Biz/Add":          1,
-// 			"/main.Biz/Test":         1,
-// 			"/main.Admin/Statistics": 1,
-// 		},
-// 		ByConsumer: map[string]uint64{
-// 			"biz_user":  2,
-// 			"biz_admin": 1,
-// 			"stat":      1,
-// 		},
-// 	}
+	expectedStat1 := &service.Stat{
+		ByMethod: map[string]uint64{
+			"/main.Biz/Check":        1,
+			"/main.Biz/Add":          1,
+			"/main.Biz/Test":         1,
+			"/main.Admin/Statistics": 1,
+		},
+		ByConsumer: map[string]uint64{
+			"biz_user":  2,
+			"biz_admin": 1,
+			"stat":      1,
+		},
+	}
 
-// 	mu.Lock()
-// 	if !reflect.DeepEqual(stat1, expectedStat1) {
-// 		t.Fatalf("stat1-1 dont match\nhave %+v\nwant %+v", stat1, expectedStat1)
-// 	}
-// 	mu.Unlock()
+	mu.Lock()
+	if !reflect.DeepEqual(stat1, expectedStat1) {
+		t.Fatalf("stat1-1 dont match\nhave %+v\nwant %+v", stat1, expectedStat1)
+	}
+	mu.Unlock()
 
-// 	_, err = biz.Add(getConsumerCtx("biz_admin"), &service.Nothing{})
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	_, err = biz.Add(getConsumerCtx("biz_admin"), &service.Nothing{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	wait(220) // 2+ sec
+	wait(220) // 2+ sec
 
-// 	expectedStat1 = &service.Stat{
-// 		Timestamp: 0,
-// 		ByMethod: map[string]uint64{
-// 			"/main.Biz/Add": 1,
-// 		},
-// 		ByConsumer: map[string]uint64{
-// 			"biz_admin": 1,
-// 		},
-// 	}
-// 	expectedStat2 := &service.Stat{
-// 		Timestamp: 0,
-// 		ByMethod: map[string]uint64{
-// 			"/main.Biz/Check": 1,
-// 			"/main.Biz/Add":   2,
-// 			"/main.Biz/Test":  1,
-// 		},
-// 		ByConsumer: map[string]uint64{
-// 			"biz_user":  2,
-// 			"biz_admin": 2,
-// 		},
-// 	}
+	expectedStat1 = &service.Stat{
+		Timestamp: 0,
+		ByMethod: map[string]uint64{
+			"/main.Biz/Add": 1,
+		},
+		ByConsumer: map[string]uint64{
+			"biz_admin": 1,
+		},
+	}
+	expectedStat2 := &service.Stat{
+		Timestamp: 0,
+		ByMethod: map[string]uint64{
+			"/main.Biz/Check": 1,
+			"/main.Biz/Add":   2,
+			"/main.Biz/Test":  1,
+		},
+		ByConsumer: map[string]uint64{
+			"biz_user":  2,
+			"biz_admin": 2,
+		},
+	}
 
-// 	mu.Lock()
-// 	if !reflect.DeepEqual(stat1, expectedStat1) {
-// 		t.Fatalf("stat1-2 dont match\nhave %+v\nwant %+v", stat1, expectedStat1)
-// 	}
-// 	if !reflect.DeepEqual(stat2, expectedStat2) {
-// 		t.Fatalf("stat2 dont match\nhave %+v\nwant %+v", stat2, expectedStat2)
-// 	}
-// 	mu.Unlock()
+	mu.Lock()
+	if !reflect.DeepEqual(stat1, expectedStat1) {
+		t.Fatalf("stat1-2 dont match\nhave %+v\nwant %+v", stat1, expectedStat1)
+	}
+	if !reflect.DeepEqual(stat2, expectedStat2) {
+		t.Fatalf("stat2 dont match\nhave %+v\nwant %+v", stat2, expectedStat2)
+	}
+	mu.Unlock()
 
-// 	finish()
-// }
+	finish()
+}

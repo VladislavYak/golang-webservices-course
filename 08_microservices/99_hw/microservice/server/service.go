@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"gitlab.com/vk-golang/lectures/08_microservices/99_hw/microservice/service"
 	grpc "google.golang.org/grpc"
@@ -23,12 +24,50 @@ import (
 var _ service.BizServer = (*Biz)(nil)
 var _ service.AdminServer = (*Admin)(nil)
 
+// yakovlev: what about atomic.AddInt32(&totalOperations, 1)?
+type CountersState struct {
+	mu         *sync.Mutex
+	ByMethod   map[string]uint64
+	ByConsumer map[string]uint64
+}
+
+func NewCountersState() *CountersState {
+	mu := &sync.Mutex{}
+	return &CountersState{mu: mu, ByConsumer: make(map[string]uint64), ByMethod: make(map[string]uint64)}
+}
+
+func (cs *CountersState) Inc(method, consumer string) {
+	cs.mu.Lock()
+	cs.ByMethod[method]++
+	cs.ByConsumer[consumer]++
+	cs.mu.Unlock()
+}
+
+// Snapshot возвращает два независимых снимка: метод и consumer
+func (cs *CountersState) Snapshot() (map[string]uint64, map[string]uint64) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	snapMethod := make(map[string]uint64, len(cs.ByMethod))
+	for k, v := range cs.ByMethod {
+		snapMethod[k] = v
+	}
+
+	snapConsumer := make(map[string]uint64, len(cs.ByConsumer))
+	for k, v := range cs.ByConsumer {
+		snapConsumer[k] = v
+	}
+
+	return snapMethod, snapConsumer
+}
+
 func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 	var aclProcessed map[string][]string
 	if err := json.Unmarshal([]byte(acl), &aclProcessed); err != nil {
 		return fmt.Errorf("failed to parse ACL: %w", err)
 	}
 
+	CountersState := NewCountersState()
 	loggingChannel := make(chan service.Event)
 	subs := map[service.Admin_LoggingServer]bool{}
 	addSubCh := make(chan struct{})
@@ -47,14 +86,16 @@ func StartMyMicroservice(ctx context.Context, addr string, acl string) error {
 		grpc.ChainUnaryInterceptor(
 			UnaryACLInterceptor(aclProcessed),
 			UnaryLoggingInterceptor(loggingChannel, addSubCh),
+			UnaryCountersInterceptor(CountersState),
 		),
 		grpc.ChainStreamInterceptor(
 			StreamACLInterceptor(aclProcessed),
 			StreamLoggingInterceptor(loggingChannel, addSubCh),
+			StreamCountersInterceptor(CountersState),
 		),
 	)
 	service.RegisterBizServer(server, NewBiz())
-	service.RegisterAdminServer(server, NewAdmin(&subs, mu))
+	service.RegisterAdminServer(server, NewAdmin(&subs, mu, CountersState))
 
 	fmt.Printf("starting server at %s\n", addr)
 
@@ -161,6 +202,24 @@ func StreamLoggingInterceptor(inChan chan service.Event, addSubCh chan struct{})
 	}
 }
 
+func StreamCountersInterceptor(countersState *CountersState) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		ctx := ss.Context()
+
+		// 2. CONSUMER из metadata
+		consumer := ""
+		if md, ok := metadata.FromIncomingContext(ctx); ok {
+			if values := md.Get("consumer"); len(values) > 0 {
+				consumer = values[0] // "logger", "biz_user"
+			}
+		}
+
+		countersState.Inc(info.FullMethod, consumer)
+
+		return handler(srv, ss)
+	}
+}
+
 // StreamACLInterceptor возвращает stream интерсептор, проверяющий доступ по ACL
 func StreamACLInterceptor(acl map[string][]string) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
@@ -195,6 +254,23 @@ func UnaryLoggingInterceptor(inChan chan service.Event, addSubCh chan struct{}) 
 	}
 }
 
+func UnaryCountersInterceptor(countersState *CountersState) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+
+		// // Consumer из metadata
+		consumer := ""
+		if md, ok := metadata.FromIncomingContext(ctx); ok {
+			if values := md.Get("consumer"); len(values) > 0 {
+				consumer = values[0]
+			}
+		}
+
+		countersState.Inc(info.FullMethod, consumer)
+
+		return handler(ctx, req)
+	}
+}
+
 // UnaryACLInterceptor возвращает unary интерсептор, проверяющий доступ по ACL
 func UnaryACLInterceptor(acl map[string][]string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
@@ -208,12 +284,13 @@ func UnaryACLInterceptor(acl map[string][]string) grpc.UnaryServerInterceptor {
 
 type Admin struct {
 	service.UnimplementedAdminServer
-	mu   *sync.Mutex
-	subs *map[service.Admin_LoggingServer]bool
+	mu            *sync.Mutex
+	subs          *map[service.Admin_LoggingServer]bool
+	countersState *CountersState
 }
 
-func NewAdmin(subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex) *Admin {
-	return &Admin{subs: subs, mu: mu}
+func NewAdmin(subs *map[service.Admin_LoggingServer]bool, mu *sync.Mutex, countersState *CountersState) *Admin {
+	return &Admin{subs: subs, mu: mu, countersState: countersState}
 }
 
 func (a *Admin) Logging(myNothing *service.Nothing, myStream grpc.ServerStreamingServer[service.Event]) error {
@@ -230,9 +307,65 @@ func (a *Admin) Logging(myNothing *service.Nothing, myStream grpc.ServerStreamin
 	return nil
 
 }
+func (a *Admin) Statistics(interval *service.StatInterval, stream service.Admin_StatisticsServer) error {
+	// 1. Снимок текущих глобальных счётчиков на момент подключения
+	lastMethod, lastConsumer := a.countersState.Snapshot()
 
-func (a *Admin) Statistics(*service.StatInterval, grpc.ServerStreamingServer[service.Stat]) error {
+	// 2. Запускаем личную горутину клиента
+	go func() {
+		ticker := time.NewTicker(time.Duration(interval.IntervalSeconds) * time.Second)
+		defer ticker.Stop()
 
+		// lastState живёт только в этой горутине
+		currentLastMethod := lastMethod
+		currentLastConsumer := lastConsumer
+
+		for {
+			select {
+			case <-ticker.C:
+				// Текущий глобальный снимок
+				currMethod, currConsumer := a.countersState.Snapshot()
+
+				// Дельта по методам
+				deltaMethod := make(map[string]uint64)
+				for method, count := range currMethod {
+					prev := currentLastMethod[method]
+					if count > prev {
+						deltaMethod[method] = count - prev
+					}
+				}
+
+				// Дельта по consumer'ам
+				deltaConsumer := make(map[string]uint64)
+				for cons, count := range currConsumer {
+					prev := currentLastConsumer[cons]
+					if count > prev {
+						deltaConsumer[cons] = count - prev
+					}
+				}
+
+				stat := &service.Stat{
+					Timestamp:  time.Now().Unix(),
+					ByMethod:   deltaMethod,
+					ByConsumer: deltaConsumer,
+				}
+
+				if err := stream.Send(stat); err != nil {
+					return
+				}
+
+				// Обновляем lastState
+				currentLastMethod = currMethod
+				currentLastConsumer = currConsumer
+
+			case <-stream.Context().Done():
+				return // Горутина завершится, состояние умрёт с ней
+			}
+		}
+	}()
+
+	// 3. Ждём отключения клиента
+	<-stream.Context().Done()
 	return nil
 }
 
