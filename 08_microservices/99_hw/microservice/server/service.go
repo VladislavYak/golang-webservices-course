@@ -34,8 +34,7 @@ type CountersState struct {
 }
 
 func NewCountersState() *CountersState {
-	mu := &sync.Mutex{}
-	return &CountersState{mu: mu, ByConsumer: make(map[string]uint64), ByMethod: make(map[string]uint64)}
+	return &CountersState{mu: &sync.Mutex{}, ByConsumer: make(map[string]uint64), ByMethod: make(map[string]uint64)}
 }
 
 func (cs *CountersState) Inc(method, consumer string) {
@@ -255,7 +254,7 @@ func UnaryLoggingInterceptor(inChan chan service.Event, sendDone chan struct{}) 
 func UnaryCountersInterceptor(countersState *CountersState) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 
-		// // Consumer из metadata
+		// Consumer из metadata
 		consumer := ""
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
 			if values := md.Get("consumer"); len(values) > 0 {

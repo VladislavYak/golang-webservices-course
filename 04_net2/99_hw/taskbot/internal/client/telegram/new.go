@@ -12,7 +12,6 @@ import (
 )
 
 func (t *Telegram) new(user *models.User, taskname string, chatID int64) {
-
 	data := url.Values{}
 	data.Set("taskname", taskname)
 	data.Set("username", user.UserName)

@@ -1,0 +1,4 @@
+github.com/gorilla/mux v1.8.1 h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=
+github.com/gorilla/mux v1.8.1/go.mod h1:AKf9I4AEqPTmMytcMc0KkNouC66V3BtZ4qD5fmWSiMQ=
+gitlab.com/vk-golang/lectures v0.0.0-20240226082348-3e79caac812c h1:x6o+FXhAraKrGnEMp35VzTGS3fx0OifThFe2ts2yG5I=
+gitlab.com/vk-golang/lectures v0.0.0-20240226082348-3e79caac812c/go.mod h1:07WK+wE1ZOGP4rxJQkpX1iX5VyrFI9XP9bvTNrtPk/U=

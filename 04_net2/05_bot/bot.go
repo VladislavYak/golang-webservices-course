@@ -92,11 +92,7 @@ func main() {
 	}
 
 	updates := bot.ListenForWebhook("/")
-
-	http.HandleFunc("/state", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("all is working"))
-	})
-
+ 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
